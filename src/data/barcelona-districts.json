@@ -1,0 +1,84 @@
+{
+  "_meta": {
+    "source": "Generalitat de Catalunya — Registre de Fiançaments de Contractes de Lloguer",
+    "dataset": "https://analisi.transparenciacatalunya.cat/resource/qww9-bvhh.json",
+    "districtFactors": "Derived from 2025 market data (Idealista/Fotocasa) calibrated against Generalitat city average",
+    "lastUpdated": "2025-T1",
+    "cityAvgPricePerM2": 23.8,
+    "cityAvgMonthlyPrice": 1285,
+    "cityAvgSurface": 54,
+    "updatedAt": "2025-03-01T00:00:00.000Z"
+  },
+  "districts": [
+    {
+      "name": "Eixample",
+      "factor": 1.101,
+      "avgPricePerM2": 26.2,
+      "avgMonthlyPrice": 1913,
+      "avgSurface": 73
+    },
+    {
+      "name": "Gràcia",
+      "factor": 1.033,
+      "avgPricePerM2": 24.6,
+      "avgMonthlyPrice": 1479,
+      "avgSurface": 60
+    },
+    {
+      "name": "Ciutat Vella",
+      "factor": 1.063,
+      "avgPricePerM2": 25.3,
+      "avgMonthlyPrice": 1342,
+      "avgSurface": 53
+    },
+    {
+      "name": "Sarrià-Sant Gervasi",
+      "factor": 0.983,
+      "avgPricePerM2": 23.4,
+      "avgMonthlyPrice": 1803,
+      "avgSurface": 77
+    },
+    {
+      "name": "Sant Martí",
+      "factor": 0.967,
+      "avgPricePerM2": 23.0,
+      "avgMonthlyPrice": 1495,
+      "avgSurface": 65
+    },
+    {
+      "name": "Sants-Montjuïc",
+      "factor": 0.887,
+      "avgPricePerM2": 21.1,
+      "avgMonthlyPrice": 1224,
+      "avgSurface": 58
+    },
+    {
+      "name": "Les Corts",
+      "factor": 0.895,
+      "avgPricePerM2": 21.3,
+      "avgMonthlyPrice": 1512,
+      "avgSurface": 71
+    },
+    {
+      "name": "Sant Andreu",
+      "factor": 0.756,
+      "avgPricePerM2": 18.0,
+      "avgMonthlyPrice": 1044,
+      "avgSurface": 58
+    },
+    {
+      "name": "Horta-Guinardó",
+      "factor": 0.727,
+      "avgPricePerM2": 17.3,
+      "avgMonthlyPrice": 1004,
+      "avgSurface": 58
+    },
+    {
+      "name": "Nou Barris",
+      "factor": 0.689,
+      "avgPricePerM2": 16.4,
+      "avgMonthlyPrice": 951,
+      "avgSurface": 58
+    }
+  ]
+}

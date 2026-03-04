@@ -1,50 +1,61 @@
 import type { ComparableListing } from "@/types";
-import { BARCELONA_ZONES } from "./zones";
+import districtData from "@/data/barcelona-districts.json";
 
-// Generate realistic comparable listings based on zone and listing characteristics
+interface DistrictEntry {
+  name: string;
+  factor: number;
+  avgPricePerM2: number;
+  avgMonthlyPrice: number;
+  avgSurface: number;
+}
+
+const DISTRICTS: DistrictEntry[] = districtData.districts as DistrictEntry[];
+
+// Generate comparable listings using official district average prices
+// from the Generalitat de Catalunya rental registry data.
 export function generateComparables(
   zoneName: string,
   sqm: number,
   eurM2Ref: number
 ): ComparableListing[] {
-  const zone = BARCELONA_ZONES.find(
-    (z) => z.zone_name.toLowerCase() === zoneName.toLowerCase()
+  // Find the zone's district entry
+  const zoneDistrict = DISTRICTS.find(
+    (d) => d.name.toLowerCase() === zoneName.toLowerCase()
   );
 
-  const adjacentZones = zone
-    ? BARCELONA_ZONES.filter(
-        (z) => Math.abs(z.eur_m2_ref - eurM2Ref) < 3 && z.zone_name !== zoneName
-      ).slice(0, 3)
-    : BARCELONA_ZONES.slice(0, 3);
+  // Price per m² to use for this zone (official data or provided ref)
+  const zoneM2 = zoneDistrict?.avgPricePerM2 ?? eurM2Ref;
+
+  // Pick 2-3 districts with similar price levels to show as context
+  const otherDistricts = DISTRICTS.filter(
+    (d) => d.name.toLowerCase() !== zoneName.toLowerCase()
+  )
+    .sort((a, b) => Math.abs(a.avgPricePerM2 - zoneM2) - Math.abs(b.avgPricePerM2 - zoneM2))
+    .slice(0, 3);
 
   const comparables: ComparableListing[] = [];
 
-  // Add same-zone comparables
-  const sqmVariants = [sqm - 10, sqm, sqm + 8, sqm + 15].filter(
-    (s) => s > 20
-  );
+  // Same-zone entries: show the analyzed sqm and the district avg sqm
+  const sameZoneSizes = Array.from(
+    new Set([sqm, zoneDistrict?.avgSurface ?? sqm])
+  ).slice(0, 2);
 
-  sqmVariants.slice(0, 2).forEach((s) => {
-    const eur_m2 =
-      Math.round((eurM2Ref * (0.92 + Math.random() * 0.16)) * 10) / 10;
+  sameZoneSizes.forEach((s) => {
     comparables.push({
       zone: zoneName,
-      price: Math.round(s * eur_m2),
+      price: Math.round(s * zoneM2),
       sqm: s,
-      eur_m2,
+      eur_m2: zoneM2,
     });
   });
 
-  // Add adjacent zone comparables
-  adjacentZones.slice(0, 2).forEach((az) => {
-    const s = Math.round(sqm + (Math.random() - 0.5) * 20);
-    const eur_m2 =
-      Math.round((az.eur_m2_ref * (0.94 + Math.random() * 0.12)) * 10) / 10;
+  // Nearby district entries: use each district's official avg surface and price
+  otherDistricts.slice(0, 2).forEach((d) => {
     comparables.push({
-      zone: az.zone_name,
-      price: Math.round(Math.max(20, s) * eur_m2),
-      sqm: Math.max(20, s),
-      eur_m2,
+      zone: d.name,
+      price: d.avgMonthlyPrice,
+      sqm: d.avgSurface,
+      eur_m2: d.avgPricePerM2,
     });
   });
 
