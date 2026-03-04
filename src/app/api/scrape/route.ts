@@ -1,164 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import type { ScrapedListing } from "@/lib/scraper/urlParser";
 
-// Zone name aliases → canonical zone names
-const ZONE_ALIASES: Record<string, string> = {
-  eixample: "Eixample",
+// ─── Zone detection from URL slug ──────────────────────────────────────────
+
+const ZONE_SLUG_MAP: Record<string, string> = {
   "l-eixample": "Eixample",
-  "l'eixample": "Eixample",
+  eixample: "Eixample",
   gracia: "Gràcia",
   "vila-de-gracia": "Gràcia",
   "vila-de-gràcia": "Gràcia",
   sants: "Sants",
   "sants-montjuic": "Sants",
-  "sants-montjuïc": "Sants",
   montjuic: "Sants",
   "sant-marti": "Sant Martí",
   "sant-martí": "Sant Martí",
   poblenou: "Sant Martí",
   "diagonal-mar": "Sant Martí",
   "el-clot": "Sant Martí",
-  "la-verneda": "Sant Martí",
-  "22-arroba": "Sant Martí",
   "ciudad-vella": "Ciutat Vella",
   "ciutat-vella": "Ciutat Vella",
   gothic: "Ciutat Vella",
-  "barrio-gotico": "Ciutat Vella",
   raval: "Ciutat Vella",
-  "el-raval": "Ciutat Vella",
   born: "Ciutat Vella",
   barceloneta: "Ciutat Vella",
   sarria: "Sarrià",
-  "sarrià": "Sarrià",
   "sant-gervasi": "Sarrià",
   pedralbes: "Les Corts",
   "les-corts": "Les Corts",
   horta: "Horta",
   "horta-guinardo": "Horta",
-  "horta-guinardó": "Horta",
   guinardo: "Horta",
   "nou-barris": "Nou Barris",
   roquetes: "Nou Barris",
-  trinitat: "Nou Barris",
   "sant-andreu": "Sant Andreu",
   sagrera: "Sant Andreu",
-  "la-sagrera": "Sant Andreu",
 };
-
-const ZONE_ALIASES_TEXT: Record<string, string> = Object.fromEntries(
-  Object.entries(ZONE_ALIASES).map(([k, v]) => [k.replace(/-/g, " "), v])
-);
-
-function detectZoneFromText(text: string): string | undefined {
-  const lower = text.toLowerCase();
-  const allAliases = { ...ZONE_ALIASES_TEXT, ...ZONE_ALIASES };
-  const sorted = Object.keys(allAliases).sort((a, b) => b.length - a.length);
-  for (const alias of sorted) {
-    if (lower.includes(alias)) return allAliases[alias];
-  }
-  return undefined;
-}
 
 function detectZoneFromUrl(url: string): string | undefined {
   const lower = url.toLowerCase();
-  const sorted = Object.keys(ZONE_ALIASES).sort((a, b) => b.length - a.length);
-  for (const alias of sorted) {
-    if (lower.includes(alias)) return ZONE_ALIASES[alias];
+  const sorted = Object.keys(ZONE_SLUG_MAP).sort((a, b) => b.length - a.length);
+  for (const slug of sorted) {
+    if (lower.includes(slug)) return ZONE_SLUG_MAP[slug];
   }
   return undefined;
 }
 
-function parseNumber(s: string): number {
-  return parseInt(s.replace(/\./g, "").replace(/,/g, ""), 10);
-}
+// ─── Fetch strategies ───────────────────────────────────────────────────────
 
-function parseListing(text: string, url: string): ScrapedListing {
-  const result: ScrapedListing = { city: "barcelona" };
-
-  // Price: handles "1.200 €/mes", "1200 €/mes", "1.200 € al mes", "1200€/mes"
-  const priceMatch = text.match(
-    /(\d[\d.]*)\s*€\s*(?:\/\s*mes|al\s+mes|\/\s*month|\s+mes)/i
-  );
-  if (priceMatch) {
-    const v = parseNumber(priceMatch[1]);
-    if (v > 100 && v < 20000) result.price_monthly = v;
-  }
-
-  // Surface area: first reasonable "XX m²" value
-  for (const m of text.matchAll(/(\d+)\s*m[²2²]/gi)) {
-    const v = parseInt(m[1], 10);
-    if (v >= 20 && v <= 600) {
-      result.sqm = v;
-      break;
-    }
-  }
-
-  // Bedrooms
-  const bedMatch =
-    text.match(/(\d+)\s*habitacion(?:es)?/i) ||
-    text.match(/(\d+)\s*hab\.?(?:\s|,)/i) ||
-    text.match(/(\d+)\s*dormitorio/i) ||
-    text.match(/(\d+)\s*bedroom/i);
-  if (bedMatch) result.bedrooms = Math.min(parseInt(bedMatch[1], 10), 5);
-
-  // Bathrooms
-  const bathMatch =
-    text.match(/(\d+)\s*ba[ñn]os?/i) || text.match(/(\d+)\s*bathroom/i);
-  if (bathMatch) result.bathrooms = Math.min(parseInt(bathMatch[1], 10), 3);
-
-  // Floor
-  const floorMatch =
-    text.match(/(\d+)[aª°]\s*planta/i) ||
-    text.match(/planta\s*(\d+)/i) ||
-    text.match(/(\d+)(?:st|nd|rd|th)?\s*floor/i);
-  if (floorMatch) result.floor = Math.min(parseInt(floorMatch[1], 10), 10);
-  else if (/\bplanta\s*baja\b|\bbajo\b/i.test(text)) result.floor = 0;
-
-  // Boolean features
-  if (/\bascensor\b/i.test(text)) result.has_elevator = true;
-  if (/\bterraza\b|\bbalc[oó]n\b/i.test(text)) result.has_terrace = true;
-  if (/\bamueblad[oa]\b|\bcon\s+muebles\b/i.test(text)) result.furnished = true;
-
-  // Zone: try text content first, then URL
-  result.zone_name = detectZoneFromText(text) ?? detectZoneFromUrl(url);
-
-  return result;
-}
-
-function extractMetaContent(html: string, ...names: string[]): string {
-  for (const name of names) {
-    // property="..." or name="..."
-    const m =
-      html.match(
-        new RegExp(
-          `<meta[^>]+(?:property|name)=["']${name}["'][^>]+content=["']([^"']+)["']`,
-          "i"
-        )
-      ) ||
-      html.match(
-        new RegExp(
-          `<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${name}["']`,
-          "i"
-        )
-      );
-    if (m?.[1]) return m[1];
-  }
-  return "";
-}
-
-function extractJsonLd(html: string): Record<string, unknown> | null {
-  const m = html.match(
-    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i
-  );
-  if (!m) return null;
-  try {
-    return JSON.parse(m[1]);
-  } catch {
-    return null;
-  }
-}
-
-/** Strategy 1: Direct fetch — works for sites without aggressive bot detection */
 async function fetchDirectHtml(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
@@ -169,11 +58,9 @@ async function fetchDirectHtml(url: string): Promise<string | null> {
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
         "Accept-Encoding": "gzip, deflate, br",
-        "Cache-Control": "no-cache",
         "Sec-Fetch-Dest": "document",
         "Sec-Fetch-Mode": "navigate",
         "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
         "Upgrade-Insecure-Requests": "1",
       },
       redirect: "follow",
@@ -182,21 +69,20 @@ async function fetchDirectHtml(url: string): Promise<string | null> {
     if (!res.ok) return null;
     const ct = res.headers.get("content-type") || "";
     if (!ct.includes("html")) return null;
-    const text = await res.text();
+    const html = await res.text();
     // Discard Cloudflare challenge pages
     if (
-      text.includes("cf-browser-verification") ||
-      text.includes("challenge-platform") ||
-      text.includes("Just a moment")
+      html.includes("cf-browser-verification") ||
+      html.includes("challenge-platform") ||
+      html.includes("Just a moment")
     )
       return null;
-    return text;
+    return html;
   } catch {
     return null;
   }
 }
 
-/** Strategy 2: Jina AI Reader — renders JS and handles bot protection */
 async function fetchViaJina(url: string): Promise<string | null> {
   try {
     const res = await fetch(`https://r.jina.ai/${url}`, {
@@ -209,18 +95,15 @@ async function fetchViaJina(url: string): Promise<string | null> {
     });
     if (!res.ok) return null;
 
-    // Try JSON response first (richer)
     const ct = res.headers.get("content-type") || "";
     if (ct.includes("json")) {
       const json = await res.json();
       const content = json?.data?.content ?? json?.content ?? "";
-      if (typeof content === "string" && content.length > 50) return content;
+      if (typeof content === "string" && content.length > 100) return content;
       return null;
     }
-
     const text = await res.text();
-    if (text.length < 50) return null;
-    // Discard Jina error pages
+    if (text.length < 100) return null;
     if (text.includes("Just a moment") || text.includes("Access denied"))
       return null;
     return text;
@@ -229,55 +112,174 @@ async function fetchViaJina(url: string): Promise<string | null> {
   }
 }
 
-/** Parse HTML (direct fetch): JSON-LD + meta description + body text */
-function parseFromHtml(html: string, url: string): ScrapedListing {
-  // 1. Try JSON-LD structured data
-  const jsonLd = extractJsonLd(html);
-  if (jsonLd) {
-    const ld = jsonLd as Record<string, unknown>;
-    const partial: ScrapedListing = { city: "barcelona" };
+// Extract useful text from HTML: meta tags + JSON-LD + strip tags
+function extractTextFromHtml(html: string): string {
+  const parts: string[] = [];
 
-    const floor = ld["floorSize"] as Record<string, unknown> | undefined;
-    if (floor?.value) partial.sqm = Number(floor.value);
+  // og:title, og:description, name="description"
+  const metas = [
+    html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1],
+    ...["og:title", "og:description", "description", "twitter:description"].map(
+      (name) =>
+        html.match(
+          new RegExp(
+            `<meta[^>]+(?:property|name)=["']${name}["'][^>]+content=["']([^"']{10,})["']`,
+            "i"
+          )
+        )?.[1] ||
+        html.match(
+          new RegExp(
+            `<meta[^>]+content=["']([^"']{10,})["'][^>]+(?:property|name)=["']${name}["']`,
+            "i"
+          )
+        )?.[1]
+    ),
+  ].filter(Boolean);
+  parts.push(...(metas as string[]));
 
-    const rooms = ld["numberOfRooms"];
-    if (rooms) partial.bedrooms = Math.min(Number(rooms), 5);
+  // JSON-LD
+  const jsonLdMatch = html.match(
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i
+  );
+  if (jsonLdMatch) parts.push(jsonLdMatch[1]);
 
-    const bathrooms = ld["numberOfBathroomsTotal"] ?? ld["numberOfBathrooms"];
-    if (bathrooms) partial.bathrooms = Math.min(Number(bathrooms), 3);
+  // Strip HTML tags from a section of body (first 8000 chars)
+  const body = html.slice(0, 40000).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  parts.push(body.slice(0, 3000));
 
-    if (partial.sqm || partial.bedrooms) {
-      // Get price + zone from meta description fallback
-      const desc = extractMetaContent(
-        html,
-        "og:description",
-        "description",
-        "twitter:description"
-      );
-      const fromDesc = parseListing(desc, url);
-      return { ...fromDesc, ...partial };
-    }
-  }
-
-  // 2. Combine title + description for parsing
-  const title = extractMetaContent(html, "og:title", "twitter:title") || "";
-  const desc =
-    extractMetaContent(
-      html,
-      "og:description",
-      "description",
-      "twitter:description"
-    ) || "";
-
-  const combined = [title, desc].join(" ");
-  if (combined.length > 20) return parseListing(combined, url);
-
-  return { city: "barcelona" };
+  return parts.join("\n").slice(0, 6000);
 }
 
+// ─── AI extraction via Claude Haiku ────────────────────────────────────────
+
+const VALID_ZONES = [
+  "Eixample",
+  "Gràcia",
+  "Sants",
+  "Sant Martí",
+  "Ciutat Vella",
+  "Sarrià",
+  "Les Corts",
+  "Horta",
+  "Nou Barris",
+  "Sant Andreu",
+];
+
+const SYSTEM_PROMPT = `You are a data extraction assistant for a Spanish rental price tool.
+Given text from a property listing page, extract the fields below as a JSON object.
+Only include fields you are confident about. Omit uncertain ones.
+
+Fields:
+- price_monthly: monthly rent in euros (number, no currency symbol)
+- sqm: surface area in m² (number, 20–600)
+- bedrooms: number of bedrooms (integer 1–5)
+- bathrooms: number of bathrooms (integer 1–3)
+- floor: floor number (integer: 0 = ground/bajo, 1–10)
+- has_elevator: building has elevator (boolean)
+- has_terrace: apartment has terrace or balcony (boolean)
+- furnished: apartment is furnished (boolean)
+- zone_name: Barcelona neighborhood — MUST be exactly one of: ${VALID_ZONES.join(", ")}
+
+Return ONLY a valid JSON object, no markdown, no explanation.`;
+
+async function extractWithAI(text: string): Promise<ScrapedListing | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const client = new Anthropic({ apiKey });
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: text }],
+    });
+
+    const raw =
+      message.content[0].type === "text" ? message.content[0].text.trim() : "";
+    if (!raw) return null;
+
+    // Strip markdown code fences if present
+    const json = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+
+    const listing: ScrapedListing = { city: "barcelona" };
+
+    if (typeof parsed.price_monthly === "number" && parsed.price_monthly > 100)
+      listing.price_monthly = parsed.price_monthly;
+    if (typeof parsed.sqm === "number" && parsed.sqm >= 20)
+      listing.sqm = parsed.sqm;
+    if (typeof parsed.bedrooms === "number")
+      listing.bedrooms = Math.min(parsed.bedrooms, 5);
+    if (typeof parsed.bathrooms === "number")
+      listing.bathrooms = Math.min(parsed.bathrooms, 3);
+    if (typeof parsed.floor === "number")
+      listing.floor = Math.min(Math.max(parsed.floor, 0), 10);
+    if (typeof parsed.has_elevator === "boolean")
+      listing.has_elevator = parsed.has_elevator;
+    if (typeof parsed.has_terrace === "boolean")
+      listing.has_terrace = parsed.has_terrace;
+    if (typeof parsed.furnished === "boolean")
+      listing.furnished = parsed.furnished;
+    if (
+      typeof parsed.zone_name === "string" &&
+      VALID_ZONES.includes(parsed.zone_name)
+    )
+      listing.zone_name = parsed.zone_name;
+
+    return listing;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Regex fallback ─────────────────────────────────────────────────────────
+
+function parseWithRegex(text: string, url: string): ScrapedListing {
+  const result: ScrapedListing = { city: "barcelona" };
+  const lower = text.toLowerCase();
+
+  const priceMatch = text.match(
+    /(\d[\d.]*)\s*€\s*(?:\/\s*mes|al\s+mes|\/\s*month|\s+mes)/i
+  );
+  if (priceMatch) {
+    const v = parseInt(priceMatch[1].replace(/\./g, ""), 10);
+    if (v > 100 && v < 20000) result.price_monthly = v;
+  }
+
+  for (const m of text.matchAll(/(\d+)\s*m[²2]/gi)) {
+    const v = parseInt(m[1], 10);
+    if (v >= 20 && v <= 600) { result.sqm = v; break; }
+  }
+
+  const bedMatch =
+    text.match(/(\d+)\s*habitacion(?:es)?/i) ||
+    text.match(/(\d+)\s*hab\.?\b/i) ||
+    text.match(/(\d+)\s*dormitorio/i);
+  if (bedMatch) result.bedrooms = Math.min(parseInt(bedMatch[1], 10), 5);
+
+  const bathMatch = text.match(/(\d+)\s*ba[ñn]os?/i);
+  if (bathMatch) result.bathrooms = Math.min(parseInt(bathMatch[1], 10), 3);
+
+  const floorMatch =
+    text.match(/(\d+)[aª°]\s*planta/i) || text.match(/planta\s*(\d+)/i);
+  if (floorMatch) result.floor = Math.min(parseInt(floorMatch[1], 10), 10);
+  else if (/planta baja|bajo\b/i.test(text)) result.floor = 0;
+
+  if (/\bascensor\b/i.test(lower)) result.has_elevator = true;
+  if (/\bterraza\b|\bbalc[oó]n\b/i.test(lower)) result.has_terrace = true;
+  if (/\bamueblad[oa]\b/i.test(lower)) result.furnished = true;
+
+  result.zone_name = detectZoneFromUrl(url);
+  return result;
+}
+
+// ─── Route ──────────────────────────────────────────────────────────────────
+
 function countFields(l: ScrapedListing): number {
-  return Object.values(l).filter((v) => v !== undefined && v !== "barcelona")
-    .length;
+  return Object.values(l).filter(
+    (v) => v !== undefined && v !== "barcelona"
+  ).length;
 }
 
 export async function GET(req: NextRequest) {
@@ -286,44 +288,50 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing url param" }, { status: 400 });
   }
 
-  // Always extract what we can from the URL structure itself (fast, free)
-  const urlZone = detectZoneFromUrl(url);
-  const basePartial: ScrapedListing = {
-    city: "barcelona",
-    ...(urlZone ? { zone_name: urlZone } : {}),
-  };
+  // Step 1: Fetch page content via direct HTML or Jina
+  let pageText: string | null = null;
 
-  // Strategy 1: Direct HTML fetch
   const html = await fetchDirectHtml(url);
   if (html && html.length > 500) {
-    const listing = parseFromHtml(html, url);
-    const merged = { ...basePartial, ...listing };
-    if (countFields(merged) >= 2) {
-      return NextResponse.json(merged);
+    pageText = extractTextFromHtml(html);
+  }
+
+  if (!pageText || pageText.length < 200) {
+    const jinaText = await fetchViaJina(url);
+    if (jinaText) pageText = jinaText;
+  }
+
+  // Step 2: Extract data — AI first, regex as fallback
+  let listing: ScrapedListing | null = null;
+
+  if (pageText) {
+    // Try AI extraction
+    listing = await extractWithAI(pageText);
+
+    // Fallback to regex if AI failed or returned too little
+    if (!listing || countFields(listing) < 2) {
+      const regexResult = parseWithRegex(pageText, url);
+      listing = listing
+        ? { ...regexResult, ...listing } // merge: AI wins on overlap
+        : regexResult;
     }
   }
 
-  // Strategy 2: Jina AI Reader
-  const jinaText = await fetchViaJina(url);
-  if (jinaText) {
-    const listing = parseListing(jinaText, url);
-    const merged = { ...basePartial, ...listing };
-    if (countFields(merged) >= 2) {
-      return NextResponse.json(merged);
-    }
+  // Step 3: Always try zone from URL as last resort
+  const urlZone = detectZoneFromUrl(url);
+  if (urlZone && !listing?.zone_name) {
+    listing = { ...(listing ?? {}), city: "barcelona", zone_name: urlZone };
   }
 
-  // Strategy 3: Return URL-extracted partial (zone at least)
-  if (urlZone) {
-    return NextResponse.json(basePartial);
+  if (!listing || countFields(listing) === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "No se pudo leer el anuncio. El portal bloquea el acceso automatizado. Introduce los datos manualmente.",
+      },
+      { status: 422 }
+    );
   }
 
-  // All strategies exhausted
-  return NextResponse.json(
-    {
-      error:
-        "No se pudo leer el anuncio automáticamente (el portal bloquea el acceso). Introduce los datos manualmente.",
-    },
-    { status: 422 }
-  );
+  return NextResponse.json({ city: "barcelona", ...listing });
 }
