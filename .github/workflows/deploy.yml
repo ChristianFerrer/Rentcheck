@@ -1,0 +1,35 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: ["claude/**"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel
+        run: |
+          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes --prod \
+            --build-env NEXT_PUBLIC_SUPABASE_URL=https://ggeloydwnbxpwvusiklc.supabase.co \
+            --build-env NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_J3G6XtUYYOOMYEJQ21SPiw_Umpxgz0F \
+            --build-env SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
+            --build-env NEXT_PUBLIC_APP_URL=https://rentcheck.vercel.app \
+            --env NEXT_PUBLIC_SUPABASE_URL=https://ggeloydwnbxpwvusiklc.supabase.co \
+            --env NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_J3G6XtUYYOOMYEJQ21SPiw_Umpxgz0F \
+            --env SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
+            --env NEXT_PUBLIC_APP_URL=https://rentcheck.vercel.app
