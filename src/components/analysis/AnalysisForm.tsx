@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { BARCELONA_ZONES } from "@/lib/algorithm/zones";
@@ -8,6 +8,7 @@ import type { Condition } from "@/types";
 
 interface Props {
   sourceUrl?: string;
+  prefillExample?: boolean;
 }
 
 const EXAMPLE_DATA = {
@@ -25,7 +26,7 @@ const EXAMPLE_DATA = {
   bills_included: false,
 };
 
-export default function AnalysisForm({ sourceUrl }: Props) {
+export default function AnalysisForm({ sourceUrl, prefillExample }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -44,6 +45,10 @@ export default function AnalysisForm({ sourceUrl }: Props) {
     condition: "bueno" as Condition,
     bills_included: false,
   });
+
+  useEffect(() => {
+    if (prefillExample) fillExample();
+  }, [prefillExample]);
 
   function fillExample() {
     setForm({

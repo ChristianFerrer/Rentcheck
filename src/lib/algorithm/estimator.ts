@@ -93,13 +93,14 @@ export function estimatePrice(
     });
   }
 
-  // Bills included
+  // Bills included: listing includes utilities (~100-150€/month), so fair market price is higher
   if (input.bills_included) {
+    base *= 1.08;
     factors.push({
       factor: "Gastos incluidos",
-      impact: "info",
+      impact: "+8%",
       description:
-        "El precio incluye gastos de comunidad y/o suministros — el valor real es más alto",
+        "El precio incluye gastos de comunidad y/o suministros — precio justo ajustado al alza",
     });
   }
 

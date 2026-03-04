@@ -1,41 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import AnalysisForm from "./AnalysisForm";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 export default function UrlInputForm() {
-  const router = useRouter();
   const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showManual, setShowManual] = useState(false);
-  const [error, setError] = useState("");
+  const [prefillExample, setPrefillExample] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [urlNotice, setUrlNotice] = useState(false);
 
   async function handleAnalyze(e: React.FormEvent) {
     e.preventDefault();
     if (!url.trim()) return;
 
     setLoading(true);
-    setError("");
-
-    try {
-      // For MVP: go directly to manual form with the URL saved
-      setShowManual(true);
-    } finally {
-      setLoading(false);
-    }
+    // Simulate a brief loading state for UX
+    await new Promise((r) => setTimeout(r, 600));
+    setLoading(false);
+    setUrlNotice(true);
+    setShowManual(true);
   }
 
-  async function handleExample() {
-    // Pre-fill with a realistic example
+  function handleExample() {
+    setPrefillExample(true);
     setShowManual(true);
   }
 
   if (showManual) {
     return (
       <div className="mt-8 animate-fade-in">
-        <AnalysisForm sourceUrl={url || undefined} />
+        {urlNotice && url && (
+          <div className="max-w-2xl mx-auto mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2 text-sm text-amber-800">
+            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              La importación automática de URLs no está disponible aún. Introduce los datos del anuncio manualmente a continuación.
+            </span>
+          </div>
+        )}
+        <AnalysisForm sourceUrl={url || undefined} prefillExample={prefillExample} />
       </div>
     );
   }
@@ -85,10 +91,6 @@ export default function UrlInputForm() {
           )}
         </button>
       </form>
-
-      {error && (
-        <p className="text-red-500 text-sm text-center">{error}</p>
-      )}
 
       <div className="flex items-center justify-center gap-4 flex-wrap">
         <button

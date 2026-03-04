@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import PriceBadge from "@/components/ui/PriceBadge";
 import { generateNegotiationText } from "@/lib/algorithm/estimator";
@@ -23,6 +24,22 @@ export default function ResultDashboard({ result, comparables }: Props) {
   const negotiationText = generateNegotiationText(result);
   const eurM2Price = Math.round(result.price_monthly / result.sqm);
   const eurM2Ref = result.eur_m2_ref;
+  const [copied, setCopied] = useState(false);
+  const [copiedNegotiation, setCopiedNegotiation] = useState(false);
+
+  function handleCopyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function handleCopyNegotiation() {
+    navigator.clipboard.writeText(negotiationText).then(() => {
+      setCopiedNegotiation(true);
+      setTimeout(() => setCopiedNegotiation(false), 2000);
+    });
+  }
 
   const labelColors: Record<string, string> = {
     BAJO: "from-green-500 to-emerald-600",
@@ -261,10 +278,10 @@ export default function ResultDashboard({ result, comparables }: Props) {
                 {negotiationText}
               </p>
               <button
-                onClick={() => navigator.clipboard.writeText(negotiationText)}
+                onClick={handleCopyNegotiation}
                 className="mt-4 btn-secondary text-sm py-2 px-4"
               >
-                Copiar texto
+                {copiedNegotiation ? "¡Copiado!" : "Copiar texto"}
               </button>
             </div>
           )}
@@ -274,15 +291,26 @@ export default function ResultDashboard({ result, comparables }: Props) {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h3 className="font-semibold text-gray-900 mb-1">
-                  ¿Quieres guardar este análisis?
+                  Comparte este análisis
                 </h3>
                 <p className="text-sm text-gray-500">
-                  Regístrate gratis para acceder a tu historial de análisis.
+                  Copia el enlace para compartir estos resultados.
                 </p>
               </div>
-              <Link href="/radar" className="btn-primary text-sm">
-                Ver radar →
-              </Link>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleCopyLink}
+                  className="btn-primary text-sm flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  {copied ? "¡Enlace copiado!" : "Copiar enlace"}
+                </button>
+                <Link href="/radar" className="btn-secondary text-sm">
+                  Ver radar
+                </Link>
+              </div>
             </div>
           </div>
         </div>
