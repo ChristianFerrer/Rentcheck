@@ -71,27 +71,24 @@ export default function UrlInputForm() {
             <span>{scrapeError}</span>
           </div>
         )}
-        {scraped && (
-          <div className="max-w-2xl mx-auto mb-4 p-3 rounded-lg bg-green-50 border border-green-200 flex items-start gap-2 text-sm text-green-800">
-            <svg
-              className="w-4 h-4 mt-0.5 flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <span>
-              Datos importados del anuncio. Revisa y completa los campos que
-              falten.
-            </span>
-          </div>
-        )}
+        {scraped && (() => {
+          const fields = Object.entries(scraped).filter(
+            ([k, v]) => v !== undefined && k !== "city"
+          );
+          const count = fields.length;
+          return (
+            <div className="max-w-2xl mx-auto mb-4 p-3 rounded-lg bg-green-50 border border-green-200 flex items-start gap-2 text-sm text-green-800">
+              <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span>
+                {count >= 3
+                  ? "Datos importados del anuncio. Revisa y completa los campos que falten."
+                  : "Solo se detectó la zona del anuncio. Completa el resto de campos manualmente."}
+              </span>
+            </div>
+          );
+        })()}
         <AnalysisForm
           sourceUrl={url || undefined}
           prefillExample={prefillExample}
