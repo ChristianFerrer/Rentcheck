@@ -24,7 +24,7 @@ jobs:
 
       - name: Deploy to Vercel
         run: |
-          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes --prod \
+          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes --prod --name=rentcheck \
             --build-env NEXT_PUBLIC_SUPABASE_URL=https://ggeloydwnbxpwvusiklc.supabase.co \
             --build-env NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_J3G6XtUYYOOMYEJQ21SPiw_Umpxgz0F \
             --build-env SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
