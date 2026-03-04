@@ -4,8 +4,30 @@ import type {
   ExplanationFactor,
   AnalysisResult,
 } from "@/types";
+import districtData from "@/data/barcelona-districts.json";
 
 const RANGE_PCT = 0.07; // ±7%
+
+// Size elasticity: for each 100% deviation from avg surface, price/m² moves ~35%
+// e.g. a 30m² piso in a zone averaging 60m² → +17.5% €/m²
+// Based on Barcelona market data: smaller units command significant €/m² premium
+const SIZE_ELASTICITY = 0.35;
+const MAX_SIZE_CORRECTION = 0.25; // cap at ±25%
+
+// Zone name aliases to match district JSON entries
+const ZONE_ALIASES: Record<string, string> = {
+  Sarrià: "Sarrià-Sant Gervasi",
+  Sants: "Sants-Montjuïc",
+  Horta: "Horta-Guinardó",
+};
+
+function getDistrictAvgSurface(zoneName: string): number {
+  const normalized = ZONE_ALIASES[zoneName] ?? zoneName;
+  const district = districtData.districts.find(
+    (d) => d.name.toLowerCase() === normalized.toLowerCase()
+  );
+  return district?.avgSurface ?? 60; // 60m² default (Barcelona city avg)
+}
 
 export interface EstimationOutput {
   eur_m2_ref: number;
@@ -23,6 +45,32 @@ export function estimatePrice(
 ): EstimationOutput {
   let base = eur_m2_ref * input.sqm;
   const factors: ExplanationFactor[] = [];
+
+  // ── Size correction ──────────────────────────────────────────────────────────
+  // Smaller apartments command a higher €/m² than larger ones in the same zone.
+  // We correct the base price using how far this piso deviates from the zone avg.
+  const avgSurface = getDistrictAvgSurface(input.zone_name);
+  const deviation = (avgSurface - input.sqm) / avgSurface;
+  const rawCorrection = SIZE_ELASTICITY * deviation;
+  const sizeCorrection = Math.max(
+    -MAX_SIZE_CORRECTION,
+    Math.min(MAX_SIZE_CORRECTION, rawCorrection)
+  );
+
+  if (Math.abs(sizeCorrection) >= 0.03) {
+    base *= 1 + sizeCorrection;
+    const pct = Math.round(sizeCorrection * 100);
+    factors.push({
+      factor: "Tamaño del piso",
+      impact: `${pct > 0 ? "+" : ""}${pct}%`,
+      description:
+        pct > 0
+          ? `Los pisos pequeños (${input.sqm}m²) tienen €/m² más alto que la media de la zona (${avgSurface}m²)`
+          : `Los pisos grandes (${input.sqm}m²) tienen €/m² más ajustado que la media de la zona (${avgSurface}m²)`,
+    });
+  }
+
+  // ── Feature adjustments ──────────────────────────────────────────────────────
 
   // Elevator bonus
   if (input.has_elevator) {
@@ -164,12 +212,8 @@ export function generateNegotiationText(result: AnalysisResult): string {
   if (result.label !== "ELEVADO") return "";
 
   const suggestedMin = result.estimated_min;
-  const suggestedMax = Math.round(
-    result.estimated_price * 1.03
-  );
-  const overprice = Math.round(
-    result.price_monthly - result.estimated_price
-  );
+  const suggestedMax = Math.round(result.estimated_price * 1.03);
+  const overprice = Math.round(result.price_monthly - result.estimated_price);
 
   return `Basándonos en los precios actuales de la zona ${result.zone_name}, este piso está aproximadamente un ${Math.abs(result.difference_pct)}% por encima del mercado (unos ${overprice}€ de diferencia). Podrías proponer un alquiler de entre ${suggestedMin.toLocaleString("es-ES")}€ y ${suggestedMax.toLocaleString("es-ES")}€ mensuales. Una estrategia efectiva sería ofrecer el precio medio del mercado justificando con pisos similares en la zona.`;
 }
