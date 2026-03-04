@@ -1,0 +1,292 @@
+"use client";
+
+import Link from "next/link";
+import PriceBadge from "@/components/ui/PriceBadge";
+import { generateNegotiationText } from "@/lib/algorithm/estimator";
+import type { AnalysisResult, ComparableListing } from "@/types";
+
+interface Props {
+  result: AnalysisResult;
+  comparables: ComparableListing[];
+}
+
+function formatEur(n: number) {
+  return n.toLocaleString("es-ES") + "€";
+}
+
+function formatPct(n: number) {
+  const sign = n >= 0 ? "+" : "";
+  return `${sign}${n.toFixed(1)}%`;
+}
+
+export default function ResultDashboard({ result, comparables }: Props) {
+  const negotiationText = generateNegotiationText(result);
+  const eurM2Price = Math.round(result.price_monthly / result.sqm);
+  const eurM2Ref = result.eur_m2_ref;
+
+  const labelColors: Record<string, string> = {
+    BAJO: "from-green-500 to-emerald-600",
+    MEDIO: "from-yellow-500 to-amber-500",
+    ELEVADO: "from-red-500 to-rose-600",
+  };
+
+  return (
+    <div className="container-app py-10 animate-fade-in">
+      {/* Back link */}
+      <div className="mb-8">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Nuevo análisis
+        </Link>
+      </div>
+
+      {/* Hero result card */}
+      <div className={`card overflow-hidden mb-8`}>
+        <div className={`bg-gradient-to-r ${labelColors[result.label]} p-8 text-white`}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              <p className="text-white/70 text-sm font-medium mb-2 uppercase tracking-wider">
+                Veredicto
+              </p>
+              <PriceBadge label={result.label} size="lg" />
+              <p className="mt-4 text-white/90 text-lg max-w-md">
+                {result.difference_pct > 0
+                  ? `Este piso está aproximadamente un ${Math.abs(result.difference_pct)}% por encima del precio medio del mercado.`
+                  : result.difference_pct < 0
+                  ? `Este piso está aproximadamente un ${Math.abs(result.difference_pct)}% por debajo del precio medio del mercado.`
+                  : "Este piso está en línea con el precio medio del mercado."}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-white/70 text-sm">Precio anunciado</p>
+              <p className="text-4xl font-bold">{formatEur(result.price_monthly)}</p>
+              <p className="text-white/70 text-sm">/mes</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
+          {[
+            {
+              label: "Precio estimado",
+              value: formatEur(result.estimated_price),
+              sub: "referencia mercado",
+            },
+            {
+              label: "Rango estimado",
+              value: `${formatEur(result.estimated_min)} – ${formatEur(result.estimated_max)}`,
+              sub: "±7%",
+            },
+            {
+              label: "€/m² anunciado",
+              value: `${eurM2Price} €/m²`,
+              sub: `ref: ${eurM2Ref} €/m²`,
+            },
+            {
+              label: "Diferencia",
+              value: formatPct(result.difference_pct),
+              sub: "vs mercado",
+              highlight: true,
+            },
+          ].map((stat) => (
+            <div key={stat.label} className="p-5 text-center">
+              <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
+              <p
+                className={`text-xl font-bold ${
+                  stat.highlight
+                    ? result.label === "BAJO"
+                      ? "text-green-600"
+                      : result.label === "ELEVADO"
+                      ? "text-red-600"
+                      : "text-yellow-600"
+                    : "text-gray-900"
+                }`}
+              >
+                {stat.value}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">{stat.sub}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Factors */}
+        <div className="md:col-span-1 space-y-6">
+          <div className="card p-6">
+            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Factores analizados
+            </h2>
+            <div className="space-y-3">
+              {result.explanation.map((f, i) => (
+                <div
+                  key={i}
+                  className="flex items-start justify-between gap-3 py-2 border-b border-gray-50 last:border-0"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">
+                      {f.factor}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {f.description}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
+                      f.impact.startsWith("+")
+                        ? "bg-green-100 text-green-700"
+                        : f.impact.startsWith("-")
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {f.impact}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Listing details */}
+          <div className="card p-6">
+            <h2 className="font-semibold text-gray-900 mb-4">
+              Detalles del piso
+            </h2>
+            <dl className="space-y-2 text-sm">
+              {[
+                { label: "Zona", value: result.zone_name },
+                { label: "Superficie", value: `${result.sqm} m²` },
+                {
+                  label: "Habitaciones",
+                  value: `${result.bedrooms} hab. · ${result.bathrooms} baño${result.bathrooms > 1 ? "s" : ""}`,
+                },
+                {
+                  label: "Planta",
+                  value: result.floor === 0 ? "Bajo" : `${result.floor}ª`,
+                },
+                { label: "Estado", value: result.condition.replace("_", " ") },
+              ].map((item) => (
+                <div key={item.label} className="flex justify-between">
+                  <dt className="text-gray-500">{item.label}</dt>
+                  <dd className="font-medium text-gray-900 capitalize">
+                    {item.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+
+        {/* Right column */}
+        <div className="md:col-span-2 space-y-6">
+          {/* Comparables */}
+          <div className="card p-6">
+            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Pisos similares en el mercado
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 text-gray-500 font-medium">
+                      Zona
+                    </th>
+                    <th className="text-right py-2 text-gray-500 font-medium">
+                      Precio
+                    </th>
+                    <th className="text-right py-2 text-gray-500 font-medium">
+                      m²
+                    </th>
+                    <th className="text-right py-2 text-gray-500 font-medium">
+                      €/m²
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparables.map((c, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="py-3 text-gray-900">{c.zone}</td>
+                      <td className="py-3 text-right font-medium text-gray-900">
+                        {formatEur(c.price)}
+                      </td>
+                      <td className="py-3 text-right text-gray-600">
+                        {c.sqm}m²
+                      </td>
+                      <td className="py-3 text-right">
+                        <span
+                          className={`font-semibold ${
+                            c.eur_m2 < eurM2Ref
+                              ? "text-green-600"
+                              : c.eur_m2 > eurM2Ref * 1.1
+                              ? "text-red-600"
+                              : "text-yellow-600"
+                          }`}
+                        >
+                          {c.eur_m2}€
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              * Datos estimados basados en el precio de referencia de zona.
+            </p>
+          </div>
+
+          {/* Negotiation */}
+          {negotiationText && (
+            <div className="card p-6 border-l-4 border-orange-400">
+              <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <span className="text-xl">💬</span>
+                Texto sugerido de negociación
+              </h2>
+              <p className="text-gray-600 leading-relaxed text-sm">
+                {negotiationText}
+              </p>
+              <button
+                onClick={() => navigator.clipboard.writeText(negotiationText)}
+                className="mt-4 btn-secondary text-sm py-2 px-4"
+              >
+                Copiar texto
+              </button>
+            </div>
+          )}
+
+          {/* CTA */}
+          <div className="card p-6 bg-brand-50 border-brand-100">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  ¿Quieres guardar este análisis?
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Regístrate gratis para acceder a tu historial de análisis.
+                </p>
+              </div>
+              <Link href="/radar" className="btn-primary text-sm">
+                Ver radar →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
