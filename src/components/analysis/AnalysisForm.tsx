@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { BARCELONA_ZONES } from "@/lib/algorithm/zones";
 import type { Condition } from "@/types";
+import type { ScrapedListing } from "@/lib/scraper/urlParser";
 
 interface Props {
   sourceUrl?: string;
   prefillExample?: boolean;
+  scrapedData?: ScrapedListing;
 }
 
 const EXAMPLE_DATA = {
@@ -26,7 +28,7 @@ const EXAMPLE_DATA = {
   bills_included: false,
 };
 
-export default function AnalysisForm({ sourceUrl, prefillExample }: Props) {
+export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +51,35 @@ export default function AnalysisForm({ sourceUrl, prefillExample }: Props) {
   useEffect(() => {
     if (prefillExample) fillExample();
   }, [prefillExample]);
+
+  useEffect(() => {
+    if (!scrapedData) return;
+    setForm((prev) => ({
+      ...prev,
+      ...(scrapedData.city ? { city: scrapedData.city } : {}),
+      ...(scrapedData.zone_name ? { zone_name: scrapedData.zone_name } : {}),
+      ...(scrapedData.price_monthly != null
+        ? { price_monthly: String(scrapedData.price_monthly) }
+        : {}),
+      ...(scrapedData.sqm != null ? { sqm: String(scrapedData.sqm) } : {}),
+      ...(scrapedData.bedrooms != null
+        ? { bedrooms: String(scrapedData.bedrooms) }
+        : {}),
+      ...(scrapedData.bathrooms != null
+        ? { bathrooms: String(scrapedData.bathrooms) }
+        : {}),
+      ...(scrapedData.floor != null ? { floor: String(scrapedData.floor) } : {}),
+      ...(scrapedData.has_elevator != null
+        ? { has_elevator: scrapedData.has_elevator }
+        : {}),
+      ...(scrapedData.has_terrace != null
+        ? { has_terrace: scrapedData.has_terrace }
+        : {}),
+      ...(scrapedData.furnished != null
+        ? { furnished: scrapedData.furnished }
+        : {}),
+    }));
+  }, [scrapedData]);
 
   function fillExample() {
     setForm({

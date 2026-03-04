@@ -3,24 +3,46 @@
 import { useState } from "react";
 import AnalysisForm from "./AnalysisForm";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import type { ScrapedListing } from "@/lib/scraper/urlParser";
 
 export default function UrlInputForm() {
   const [url, setUrl] = useState("");
   const [showManual, setShowManual] = useState(false);
   const [prefillExample, setPrefillExample] = useState(false);
+  const [scraped, setScraped] = useState<ScrapedListing | null>(null);
   const [loading, setLoading] = useState(false);
-  const [urlNotice, setUrlNotice] = useState(false);
+  const [scrapeError, setScrapeError] = useState("");
 
   async function handleAnalyze(e: React.FormEvent) {
     e.preventDefault();
     if (!url.trim()) return;
 
     setLoading(true);
-    // Simulate a brief loading state for UX
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
-    setUrlNotice(true);
-    setShowManual(true);
+    setScrapeError("");
+
+    try {
+      const res = await fetch(`/api/scrape?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        // Scraping failed — still open manual form but show the error
+        setScrapeError(
+          data.error ||
+            "No se pudo leer el anuncio automáticamente. Introduce los datos manualmente."
+        );
+        setScraped(null);
+      } else {
+        setScraped(data as ScrapedListing);
+      }
+    } catch {
+      setScrapeError(
+        "Error de conexión al leer el anuncio. Introduce los datos manualmente."
+      );
+      setScraped(null);
+    } finally {
+      setLoading(false);
+      setShowManual(true);
+    }
   }
 
   function handleExample() {
@@ -31,17 +53,50 @@ export default function UrlInputForm() {
   if (showManual) {
     return (
       <div className="mt-8 animate-fade-in">
-        {urlNotice && url && (
+        {scrapeError && (
           <div className="max-w-2xl mx-auto mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2 text-sm text-amber-800">
-            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-4 h-4 mt-0.5 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{scrapeError}</span>
+          </div>
+        )}
+        {scraped && (
+          <div className="max-w-2xl mx-auto mb-4 p-3 rounded-lg bg-green-50 border border-green-200 flex items-start gap-2 text-sm text-green-800">
+            <svg
+              className="w-4 h-4 mt-0.5 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
             <span>
-              La importación automática de URLs no está disponible aún. Introduce los datos del anuncio manualmente a continuación.
+              Datos importados del anuncio. Revisa y completa los campos que
+              falten.
             </span>
           </div>
         )}
-        <AnalysisForm sourceUrl={url || undefined} prefillExample={prefillExample} />
+        <AnalysisForm
+          sourceUrl={url || undefined}
+          prefillExample={prefillExample}
+          scrapedData={scraped || undefined}
+        />
       </div>
     );
   }
@@ -76,15 +131,28 @@ export default function UrlInputForm() {
         </div>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !url.trim()}
           className="btn-primary whitespace-nowrap"
         >
           {loading ? (
-            <LoadingSpinner size="sm" />
+            <>
+              <LoadingSpinner size="sm" />
+              <span>Leyendo anuncio...</span>
+            </>
           ) : (
             <>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
               </svg>
               Analizar piso
             </>
