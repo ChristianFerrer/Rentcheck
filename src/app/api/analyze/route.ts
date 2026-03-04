@@ -3,6 +3,7 @@ import { estimatePrice, buildAnalysisResult } from "@/lib/algorithm/estimator";
 import { getZoneByName, BARCELONA_ZONES } from "@/lib/algorithm/zones";
 import { generateComparables } from "@/lib/algorithm/comparables";
 import { createAdminClient } from "@/lib/supabase/server";
+import { getZonePricePerM2 } from "@/lib/generalitat/api";
 import type { ListingInput } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -44,9 +45,12 @@ export async function POST(request: NextRequest) {
       bills_included: Boolean(body.bills_included),
     };
 
-    // Get zone reference price
+    // Get zone reference price — try live Generalitat API first, fall back to static
     const zone = getZoneByName(input.zone_name);
-    const eur_m2_ref = zone?.eur_m2_ref ?? BARCELONA_ZONES[0].eur_m2_ref;
+    const staticRef = zone?.eur_m2_ref ?? BARCELONA_ZONES[0].eur_m2_ref;
+    const eur_m2_ref = await getZonePricePerM2(input.zone_name).catch(
+      () => staticRef
+    );
 
     // Run estimation algorithm
     const estimation = estimatePrice(input, eur_m2_ref);
