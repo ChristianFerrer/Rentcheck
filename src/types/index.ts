@@ -83,3 +83,17 @@ export interface RadarDeal {
   difference_pct: number;
   label: PriceLabel;
 }
+
+export interface MarketContext {
+  cityAvgPricePerM2: number;
+  districtFactor: number;
+  districtAvgPricePerM2: number;
+  year: number;
+  source: "api" | "fallback";
+  history: Array<{
+    year: number;
+    quarter: string;
+    avgPricePerM2: number;
+    avgMonthlyPrice: number;
+  }>;
+}

@@ -4,11 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import PriceBadge from "@/components/ui/PriceBadge";
 import { generateNegotiationText } from "@/lib/algorithm/estimator";
-import type { AnalysisResult, ComparableListing } from "@/types";
+import type { AnalysisResult, ComparableListing, MarketContext } from "@/types";
 
 interface Props {
   result: AnalysisResult;
   comparables: ComparableListing[];
+  marketContext?: MarketContext | null;
 }
 
 function formatEur(n: number) {
@@ -20,7 +21,7 @@ function formatPct(n: number) {
   return `${sign}${n.toFixed(1)}%`;
 }
 
-export default function ResultDashboard({ result, comparables }: Props) {
+export default function ResultDashboard({ result, comparables, marketContext }: Props) {
   const negotiationText = generateNegotiationText(result);
   const eurM2Price = Math.round(result.price_monthly / result.sqm);
   const eurM2Ref = result.eur_m2_ref;
@@ -263,9 +264,76 @@ export default function ResultDashboard({ result, comparables }: Props) {
               </table>
             </div>
             <p className="text-xs text-gray-400 mt-3">
-              * Datos estimados basados en el precio de referencia de zona.
+              * Pisos similares estimados a partir del precio oficial Generalitat Catalunya
+              {marketContext ? ` (${marketContext.districtAvgPricePerM2.toFixed(1)} €/m² en ${result.zone_name}, año ${marketContext.year})` : " de referencia de zona"}.
             </p>
           </div>
+
+          {/* Generalitat official market data */}
+          {marketContext && (
+            <div className="card p-6">
+              <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Precio oficial según la Generalitat de Catalunya
+              </h2>
+              <p className="text-xs text-gray-400 mb-4">
+                Datos del Registre de Fiançaments de Contractes de Lloguer · {marketContext.source === "api" ? "Fuente en tiempo real" : "Datos de referencia"}
+              </p>
+
+              {/* Key stats */}
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Media Barcelona</p>
+                  <p className="text-lg font-bold text-gray-900">{marketContext.cityAvgPricePerM2.toFixed(1)} €/m²</p>
+                  <p className="text-xs text-gray-400">{marketContext.year}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Factor {result.zone_name}</p>
+                  <p className="text-lg font-bold text-gray-900">×{marketContext.districtFactor.toFixed(3)}</p>
+                  <p className="text-xs text-gray-400">ajuste distrito</p>
+                </div>
+                <div className="bg-brand-50 border border-brand-100 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Ref. zona oficial</p>
+                  <p className="text-lg font-bold text-brand-700">{marketContext.districtAvgPricePerM2.toFixed(1)} €/m²</p>
+                  <p className="text-xs text-gray-400">precio estimado</p>
+                </div>
+              </div>
+
+              {/* Historical trend table */}
+              {marketContext.history.length > 0 && (
+                <>
+                  <p className="text-xs font-medium text-gray-600 mb-2 uppercase tracking-wider">Evolución precio €/m² en Barcelona ciudad</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left py-1.5 text-xs text-gray-500 font-medium">Año</th>
+                          <th className="text-left py-1.5 text-xs text-gray-500 font-medium">Trimestre</th>
+                          <th className="text-right py-1.5 text-xs text-gray-500 font-medium">€/m² medio</th>
+                          <th className="text-right py-1.5 text-xs text-gray-500 font-medium">Precio medio</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {marketContext.history.slice(0, 8).map((h, i) => (
+                          <tr key={i} className={`border-b border-gray-50 ${i === 0 ? "font-semibold bg-gray-50" : ""}`}>
+                            <td className="py-2 text-gray-900">{h.year}</td>
+                            <td className="py-2 text-gray-600">{h.quarter}</td>
+                            <td className="py-2 text-right text-gray-900">{h.avgPricePerM2.toFixed(2)} €</td>
+                            <td className="py-2 text-right text-gray-600">{h.avgMonthlyPrice > 0 ? formatEur(Math.round(h.avgMonthlyPrice)) : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-3">
+                    Fuente: <a href="https://analisi.transparenciacatalunya.cat/Habitatge/Preu-mitj-del-lloguer-d-habitatges-per-municipi/qww9-bvhh" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Generalitat de Catalunya — Preu mitjà del lloguer per municipi</a>
+                  </p>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Negotiation */}
           {negotiationText && (

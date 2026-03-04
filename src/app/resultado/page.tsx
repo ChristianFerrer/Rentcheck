@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ResultDashboard from "@/components/analysis/ResultDashboard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import type { AnalysisResult, ComparableListing } from "@/types";
+import type { AnalysisResult, ComparableListing, MarketContext } from "@/types";
 
 export default function ResultPage() {
   const router = useRouter();
   const [result, setResult] = useState<
-    (AnalysisResult & { comparables: ComparableListing[] }) | null
+    (AnalysisResult & { comparables: ComparableListing[]; marketContext?: MarketContext | null }) | null
   >(null);
 
   useEffect(() => {
@@ -29,5 +29,5 @@ export default function ResultPage() {
     );
   }
 
-  return <ResultDashboard result={result} comparables={result.comparables} />;
+  return <ResultDashboard result={result} comparables={result.comparables} marketContext={result.marketContext} />;
 }

@@ -4,6 +4,8 @@
  * Source: https://analisi.transparenciacatalunya.cat/Habitatge/Preu-mitj-del-lloguer-d-habitatges-per-municipi/qww9-bvhh
  */
 
+import type { MarketContext } from "@/types";
+
 const SOCRATA_BASE =
   "https://analisi.transparenciacatalunya.cat/resource";
 
@@ -35,25 +37,33 @@ interface BarcelonaRentalStats {
   source: "api" | "fallback";
 }
 
+interface FullRentalData {
+  latest: BarcelonaRentalStats;
+  history: MarketContext["history"];
+}
+
 // Cache to avoid excessive API calls (in-memory, resets on server restart)
-let cache: { data: BarcelonaRentalStats; fetchedAt: number } | null = null;
+let cache: { data: FullRentalData; fetchedAt: number } | null = null;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-/**
- * Fetch average rental price statistics for Barcelona municipality
- * from the Generalitat de Catalunya Open Data API.
- */
-export async function fetchBarcelonaRentalStats(): Promise<BarcelonaRentalStats> {
-  // Return cached data if still valid
+function parseRecord(r: GeneralitatMunicipiRecord): MarketContext["history"][0] | null {
+  const avgPricePerM2 = parseFloat(r.preu_m2_mensual_mitja ?? r.preu_m2 ?? "0");
+  const avgMonthlyPrice = parseFloat(r.preu_mensual_mitja ?? r.preu_mitja ?? "0");
+  const year = parseInt(r.any ?? "0");
+  const quarter = r.trimestre ?? "";
+  if (!avgPricePerM2 || avgPricePerM2 <= 0 || !year) return null;
+  return { year, quarter, avgPricePerM2, avgMonthlyPrice };
+}
+
+async function fetchFullData(): Promise<FullRentalData> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
     return cache.data;
   }
 
   try {
     const url = new URL(`${SOCRATA_BASE}/${DATASET_PREU_LLOGUER}.json`);
-    url.searchParams.set("$limit", "10");
-    url.searchParams.set("$order", "any DESC");
-    // Filter to Barcelona only — try by code first, then name
+    url.searchParams.set("$limit", "12");
+    url.searchParams.set("$order", "any DESC, trimestre DESC");
     url.searchParams.set(
       "$where",
       `codi_municipi='${BARCELONA_CODI}' OR municipi='Barcelona'`
@@ -64,7 +74,7 @@ export async function fetchBarcelonaRentalStats(): Promise<BarcelonaRentalStats>
         Accept: "application/json",
         "X-App-Token": process.env.GENERALITAT_APP_TOKEN ?? "",
       },
-      next: { revalidate: 86400 }, // Next.js cache: 24h
+      next: { revalidate: 86400 },
     });
 
     if (!response.ok) {
@@ -77,36 +87,43 @@ export async function fetchBarcelonaRentalStats(): Promise<BarcelonaRentalStats>
       throw new Error("No records returned from Generalitat API");
     }
 
-    // Take most recent record
-    const latest = records[0];
+    const history = records
+      .map(parseRecord)
+      .filter((r): r is MarketContext["history"][0] => r !== null);
 
-    const avgPricePerM2 = parseFloat(
-      latest.preu_m2_mensual_mitja ?? latest.preu_m2 ?? "0"
-    );
-    const avgMonthlyPrice = parseFloat(
-      latest.preu_mensual_mitja ?? latest.preu_mitja ?? "0"
-    );
-    const avgSurface = parseFloat(latest.superficie_mitjana ?? "0");
-    const year = parseInt(latest.any ?? String(new Date().getFullYear()));
-
-    if (!avgPricePerM2 || avgPricePerM2 <= 0) {
+    if (history.length === 0) {
       throw new Error("Invalid price data from API");
     }
 
+    const latest = records[0];
     const stats: BarcelonaRentalStats = {
-      year,
-      avgMonthlyPrice,
-      avgPricePerM2,
-      avgSurface,
+      year: history[0].year,
+      avgMonthlyPrice: history[0].avgMonthlyPrice,
+      avgPricePerM2: history[0].avgPricePerM2,
+      avgSurface: parseFloat(latest.superficie_mitjana ?? "0"),
       source: "api",
     };
 
-    cache = { data: stats, fetchedAt: Date.now() };
-    return stats;
+    const data: FullRentalData = { latest: stats, history };
+    cache = { data, fetchedAt: Date.now() };
+    return data;
   } catch (err) {
     console.warn("[Generalitat API] Falling back to static data:", err);
-    return getFallbackStats();
+    const fallback = getFallbackStats();
+    return {
+      latest: fallback,
+      history: getFallbackHistory(),
+    };
   }
+}
+
+/**
+ * Fetch average rental price statistics for Barcelona municipality
+ * from the Generalitat de Catalunya Open Data API.
+ */
+export async function fetchBarcelonaRentalStats(): Promise<BarcelonaRentalStats> {
+  const data = await fetchFullData();
+  return data.latest;
 }
 
 /**
@@ -121,6 +138,17 @@ function getFallbackStats(): BarcelonaRentalStats {
     avgSurface: 54,
     source: "fallback",
   };
+}
+
+function getFallbackHistory(): MarketContext["history"] {
+  return [
+    { year: 2025, quarter: "T1", avgPricePerM2: 23.8, avgMonthlyPrice: 1285 },
+    { year: 2024, quarter: "T4", avgPricePerM2: 23.1, avgMonthlyPrice: 1248 },
+    { year: 2024, quarter: "T3", avgPricePerM2: 22.7, avgMonthlyPrice: 1226 },
+    { year: 2024, quarter: "T2", avgPricePerM2: 22.2, avgMonthlyPrice: 1198 },
+    { year: 2024, quarter: "T1", avgPricePerM2: 21.8, avgMonthlyPrice: 1177 },
+    { year: 2023, quarter: "T4", avgPricePerM2: 21.4, avgMonthlyPrice: 1155 },
+  ];
 }
 
 /**
@@ -158,4 +186,25 @@ export async function getZonePricePerM2(zoneName: string): Promise<number> {
     DISTRICT_FACTOR_ALIASES[zoneName] ?? zoneName;
   const factor = DISTRICT_FACTORS[normalizedName] ?? 1.0;
   return Math.round(stats.avgPricePerM2 * factor * 10) / 10;
+}
+
+/**
+ * Returns full market context for a zone:
+ * city average, district factor, district estimate, and historical trend.
+ */
+export async function getMarketContext(zoneName: string): Promise<MarketContext> {
+  const { latest, history } = await fetchFullData();
+  const normalizedName = DISTRICT_FACTOR_ALIASES[zoneName] ?? zoneName;
+  const districtFactor = DISTRICT_FACTORS[normalizedName] ?? 1.0;
+  const districtAvgPricePerM2 =
+    Math.round(latest.avgPricePerM2 * districtFactor * 10) / 10;
+
+  return {
+    cityAvgPricePerM2: latest.avgPricePerM2,
+    districtFactor,
+    districtAvgPricePerM2,
+    year: latest.year,
+    source: latest.source,
+    history,
+  };
 }
