@@ -1,9 +1,58 @@
 /**
- * Static zone data for Barcelona.
- * Reference prices updated to 2025 market data (Idealista/Fotocasa).
- * At runtime the analyze API may calibrate these via the Generalitat Open Data API
- * (see src/lib/generalitat/api.ts).
+ * Zone data for Barcelona — districts and barrios.
+ * Barrio prices from Ajuntament de Barcelona open data (2025-T1).
+ * District zones kept for backward-compatibility with the radar map.
  */
+import barrioData from "@/data/barcelona-barrios.json";
+
+export interface BarrioZone {
+  id: string;
+  city: string;
+  zone_name: string;
+  district: string;
+  center_lat: number;
+  center_lng: number;
+  eur_m2_ref: number;
+  avgSurface: number;
+  avgMonthlyPrice: number;
+}
+
+// ── Barrio zones (73 barrios) ──────────────────────────────────────────────
+export const BARCELONA_BARRIOS: BarrioZone[] = barrioData.barrios.map((b) => ({
+  id: `bcn-${b.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+  city: "barcelona",
+  zone_name: b.name,
+  district: b.district,
+  center_lat: b.center_lat,
+  center_lng: b.center_lng,
+  eur_m2_ref: b.avgPricePerM2,
+  avgSurface: b.avgSurface,
+  avgMonthlyPrice: b.avgMonthlyPrice,
+}));
+
+// ── Barrios grouped by district (for <optgroup> selects) ───────────────────
+export const BARRIOS_BY_DISTRICT: Record<string, BarrioZone[]> =
+  BARCELONA_BARRIOS.reduce<Record<string, BarrioZone[]>>((acc, b) => {
+    if (!acc[b.district]) acc[b.district] = [];
+    acc[b.district].push(b);
+    return acc;
+  }, {});
+
+// District order for display
+export const DISTRICT_ORDER = [
+  "Eixample",
+  "Gràcia",
+  "Sarrià-Sant Gervasi",
+  "Sants-Montjuïc",
+  "Les Corts",
+  "Sant Martí",
+  "Horta-Guinardó",
+  "Sant Andreu",
+  "Nou Barris",
+  "Ciutat Vella",
+];
+
+// ── District zones (kept for radar map and backward-compat) ───────────────
 export const BARCELONA_ZONES = [
   {
     id: "bcn-eixample",
@@ -87,6 +136,41 @@ export const BARCELONA_ZONES = [
   },
 ];
 
+// ── Lookup helpers ─────────────────────────────────────────────────────────
+
+/** Find a barrio by name (case-insensitive). */
+export function getBarrioByName(name: string): BarrioZone | undefined {
+  return BARCELONA_BARRIOS.find(
+    (b) => b.zone_name.toLowerCase() === name.toLowerCase()
+  );
+}
+
+/** Get the district name for a barrio (or the name itself if it's already a district). */
+export function getDistrictForZone(zoneName: string): string {
+  const barrio = getBarrioByName(zoneName);
+  if (barrio) return barrio.district;
+  // Already a district name
+  return zoneName;
+}
+
+/** Returns the €/m² reference for a zone (barrio or district). */
+export function getZoneEurM2(zoneName: string): number | undefined {
+  const barrio = getBarrioByName(zoneName);
+  if (barrio) return barrio.eur_m2_ref;
+  const district = BARCELONA_ZONES.find(
+    (z) => z.zone_name.toLowerCase() === zoneName.toLowerCase()
+  );
+  return district?.eur_m2_ref;
+}
+
+/** Returns the average surface for a zone (barrio or district). */
+export function getZoneAvgSurface(zoneName: string): number {
+  const barrio = getBarrioByName(zoneName);
+  if (barrio) return barrio.avgSurface;
+  // Fall back to barcelona-districts.json via district name
+  return 60; // city avg fallback
+}
+
 export function getZoneByName(zoneName: string) {
   return BARCELONA_ZONES.find(
     (z) => z.zone_name.toLowerCase() === zoneName.toLowerCase()
@@ -94,5 +178,5 @@ export function getZoneByName(zoneName: string) {
 }
 
 export function getDefaultZone() {
-  return BARCELONA_ZONES[0]; // Eixample as default
+  return BARCELONA_ZONES[0];
 }

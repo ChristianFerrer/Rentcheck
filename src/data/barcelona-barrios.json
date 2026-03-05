@@ -1,0 +1,677 @@
+{
+  "_meta": {
+    "source": "Ajuntament de Barcelona — Estadística i Difusió de Dades / Registre de Fiançaments Generalitat de Catalunya",
+    "dataset": "https://portaldades.ajuntament.barcelona.cat",
+    "totalBarrios": 73,
+    "lastUpdated": "2025-T1",
+    "note": "avgPricePerM2 derived from 2025 Idealista/Fotocasa barrio-level data calibrated against Generalitat city average (23.8 €/m²)"
+  },
+  "barrios": [
+    {
+      "name": "La Dreta de l'Eixample",
+      "district": "Eixample",
+      "avgPricePerM2": 28.5,
+      "avgMonthlyPrice": 2109,
+      "avgSurface": 74,
+      "center_lat": 41.3934,
+      "center_lng": 2.1728
+    },
+    {
+      "name": "La Sagrada Família",
+      "district": "Eixample",
+      "avgPricePerM2": 25.0,
+      "avgMonthlyPrice": 1700,
+      "avgSurface": 68,
+      "center_lat": 41.4015,
+      "center_lng": 2.1763
+    },
+    {
+      "name": "L'Antiga Esquerra de l'Eixample",
+      "district": "Eixample",
+      "avgPricePerM2": 26.5,
+      "avgMonthlyPrice": 1908,
+      "avgSurface": 72,
+      "center_lat": 41.3870,
+      "center_lng": 2.1620
+    },
+    {
+      "name": "La Nova Esquerra de l'Eixample",
+      "district": "Eixample",
+      "avgPricePerM2": 24.5,
+      "avgMonthlyPrice": 1715,
+      "avgSurface": 70,
+      "center_lat": 41.3800,
+      "center_lng": 2.1526
+    },
+    {
+      "name": "Sant Antoni",
+      "district": "Eixample",
+      "avgPricePerM2": 27.5,
+      "avgMonthlyPrice": 1788,
+      "avgSurface": 65,
+      "center_lat": 41.3805,
+      "center_lng": 2.1620
+    },
+    {
+      "name": "El Fort Pienc",
+      "district": "Eixample",
+      "avgPricePerM2": 25.5,
+      "avgMonthlyPrice": 1785,
+      "avgSurface": 70,
+      "center_lat": 41.3963,
+      "center_lng": 2.1817
+    },
+    {
+      "name": "Vila de Gràcia",
+      "district": "Gràcia",
+      "avgPricePerM2": 26.5,
+      "avgMonthlyPrice": 1643,
+      "avgSurface": 62,
+      "center_lat": 41.4040,
+      "center_lng": 2.1570
+    },
+    {
+      "name": "El Camp d'en Grassot i Gràcia Nova",
+      "district": "Gràcia",
+      "avgPricePerM2": 24.0,
+      "avgMonthlyPrice": 1440,
+      "avgSurface": 60,
+      "center_lat": 41.4068,
+      "center_lng": 2.1680
+    },
+    {
+      "name": "La Salut",
+      "district": "Gràcia",
+      "avgPricePerM2": 23.5,
+      "avgMonthlyPrice": 1363,
+      "avgSurface": 58,
+      "center_lat": 41.4119,
+      "center_lng": 2.1555
+    },
+    {
+      "name": "El Coll",
+      "district": "Gràcia",
+      "avgPricePerM2": 21.5,
+      "avgMonthlyPrice": 1183,
+      "avgSurface": 55,
+      "center_lat": 41.4175,
+      "center_lng": 2.1520
+    },
+    {
+      "name": "Vallcarca i els Penitents",
+      "district": "Gràcia",
+      "avgPricePerM2": 22.0,
+      "avgMonthlyPrice": 1254,
+      "avgSurface": 57,
+      "center_lat": 41.4185,
+      "center_lng": 2.1498
+    },
+    {
+      "name": "Sant Gervasi - Galvany",
+      "district": "Sarrià-Sant Gervasi",
+      "avgPricePerM2": 27.0,
+      "avgMonthlyPrice": 2160,
+      "avgSurface": 80,
+      "center_lat": 41.3975,
+      "center_lng": 2.1390
+    },
+    {
+      "name": "Sant Gervasi - la Bonanova",
+      "district": "Sarrià-Sant Gervasi",
+      "avgPricePerM2": 28.0,
+      "avgMonthlyPrice": 2520,
+      "avgSurface": 90,
+      "center_lat": 41.4065,
+      "center_lng": 2.1268
+    },
+    {
+      "name": "Les Tres Torres",
+      "district": "Sarrià-Sant Gervasi",
+      "avgPricePerM2": 29.0,
+      "avgMonthlyPrice": 2755,
+      "avgSurface": 95,
+      "center_lat": 41.4000,
+      "center_lng": 2.1160
+    },
+    {
+      "name": "El Putxet i el Farró",
+      "district": "Sarrià-Sant Gervasi",
+      "avgPricePerM2": 25.5,
+      "avgMonthlyPrice": 1989,
+      "avgSurface": 78,
+      "center_lat": 41.4098,
+      "center_lng": 2.1380
+    },
+    {
+      "name": "Sarrià",
+      "district": "Sarrià-Sant Gervasi",
+      "avgPricePerM2": 22.0,
+      "avgMonthlyPrice": 1804,
+      "avgSurface": 82,
+      "center_lat": 41.3990,
+      "center_lng": 2.1060
+    },
+    {
+      "name": "Vallvidrera, el Tibidabo i les Planes",
+      "district": "Sarrià-Sant Gervasi",
+      "avgPricePerM2": 18.0,
+      "avgMonthlyPrice": 1260,
+      "avgSurface": 70,
+      "center_lat": 41.4210,
+      "center_lng": 2.0780
+    },
+    {
+      "name": "El Poble Sec",
+      "district": "Sants-Montjuïc",
+      "avgPricePerM2": 23.5,
+      "avgMonthlyPrice": 1410,
+      "avgSurface": 60,
+      "center_lat": 41.3720,
+      "center_lng": 2.1590
+    },
+    {
+      "name": "Hostafrancs",
+      "district": "Sants-Montjuïc",
+      "avgPricePerM2": 21.0,
+      "avgMonthlyPrice": 1197,
+      "avgSurface": 57,
+      "center_lat": 41.3764,
+      "center_lng": 2.1436
+    },
+    {
+      "name": "Sants",
+      "district": "Sants-Montjuïc",
+      "avgPricePerM2": 21.5,
+      "avgMonthlyPrice": 1290,
+      "avgSurface": 60,
+      "center_lat": 41.3750,
+      "center_lng": 2.1370
+    },
+    {
+      "name": "Sants - Badal",
+      "district": "Sants-Montjuïc",
+      "avgPricePerM2": 20.5,
+      "avgMonthlyPrice": 1189,
+      "avgSurface": 58,
+      "center_lat": 41.3716,
+      "center_lng": 2.1300
+    },
+    {
+      "name": "La Bordeta",
+      "district": "Sants-Montjuïc",
+      "avgPricePerM2": 19.5,
+      "avgMonthlyPrice": 1112,
+      "avgSurface": 57,
+      "center_lat": 41.3730,
+      "center_lng": 2.1240
+    },
+    {
+      "name": "La Font de la Guatlla",
+      "district": "Sants-Montjuïc",
+      "avgPricePerM2": 21.0,
+      "avgMonthlyPrice": 1218,
+      "avgSurface": 58,
+      "center_lat": 41.3680,
+      "center_lng": 2.1450
+    },
+    {
+      "name": "La Marina de Port",
+      "district": "Sants-Montjuïc",
+      "avgPricePerM2": 18.5,
+      "avgMonthlyPrice": 1018,
+      "avgSurface": 55,
+      "center_lat": 41.3580,
+      "center_lng": 2.1480
+    },
+    {
+      "name": "La Marina del Prat Vermell",
+      "district": "Sants-Montjuïc",
+      "avgPricePerM2": 16.0,
+      "avgMonthlyPrice": 848,
+      "avgSurface": 53,
+      "center_lat": 41.3460,
+      "center_lng": 2.1360
+    },
+    {
+      "name": "Montjuïc",
+      "district": "Sants-Montjuïc",
+      "avgPricePerM2": 16.0,
+      "avgMonthlyPrice": 800,
+      "avgSurface": 50,
+      "center_lat": 41.3640,
+      "center_lng": 2.1497
+    },
+    {
+      "name": "Les Corts",
+      "district": "Les Corts",
+      "avgPricePerM2": 22.0,
+      "avgMonthlyPrice": 1606,
+      "avgSurface": 73,
+      "center_lat": 41.3845,
+      "center_lng": 2.1320
+    },
+    {
+      "name": "La Maternitat i Sant Ramon",
+      "district": "Les Corts",
+      "avgPricePerM2": 21.5,
+      "avgMonthlyPrice": 1505,
+      "avgSurface": 70,
+      "center_lat": 41.3820,
+      "center_lng": 2.1200
+    },
+    {
+      "name": "Pedralbes",
+      "district": "Les Corts",
+      "avgPricePerM2": 26.0,
+      "avgMonthlyPrice": 2340,
+      "avgSurface": 90,
+      "center_lat": 41.3878,
+      "center_lng": 2.1060
+    },
+    {
+      "name": "El Guinardó",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 18.5,
+      "avgMonthlyPrice": 1110,
+      "avgSurface": 60,
+      "center_lat": 41.4168,
+      "center_lng": 2.1740
+    },
+    {
+      "name": "El Baix Guinardó",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 18.0,
+      "avgMonthlyPrice": 1044,
+      "avgSurface": 58,
+      "center_lat": 41.4120,
+      "center_lng": 2.1750
+    },
+    {
+      "name": "Can Baró",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 17.5,
+      "avgMonthlyPrice": 998,
+      "avgSurface": 57,
+      "center_lat": 41.4200,
+      "center_lng": 2.1680
+    },
+    {
+      "name": "Horta",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 17.0,
+      "avgMonthlyPrice": 986,
+      "avgSurface": 58,
+      "center_lat": 41.4285,
+      "center_lng": 2.1560
+    },
+    {
+      "name": "El Carmel",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 15.5,
+      "avgMonthlyPrice": 853,
+      "avgSurface": 55,
+      "center_lat": 41.4220,
+      "center_lng": 2.1600
+    },
+    {
+      "name": "La Font d'en Fargues",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 17.0,
+      "avgMonthlyPrice": 986,
+      "avgSurface": 58,
+      "center_lat": 41.4340,
+      "center_lng": 2.1610
+    },
+    {
+      "name": "La Teixonera",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 15.0,
+      "avgMonthlyPrice": 825,
+      "avgSurface": 55,
+      "center_lat": 41.4290,
+      "center_lng": 2.1620
+    },
+    {
+      "name": "Sant Genís dels Agudells",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 14.5,
+      "avgMonthlyPrice": 798,
+      "avgSurface": 55,
+      "center_lat": 41.4390,
+      "center_lng": 2.1520
+    },
+    {
+      "name": "Montbau",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 16.5,
+      "avgMonthlyPrice": 957,
+      "avgSurface": 58,
+      "center_lat": 41.4385,
+      "center_lng": 2.1460
+    },
+    {
+      "name": "La Vall d'Hebron",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 16.0,
+      "avgMonthlyPrice": 928,
+      "avgSurface": 58,
+      "center_lat": 41.4295,
+      "center_lng": 2.1430
+    },
+    {
+      "name": "La Clota",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 14.0,
+      "avgMonthlyPrice": 742,
+      "avgSurface": 53,
+      "center_lat": 41.4350,
+      "center_lng": 2.1750
+    },
+    {
+      "name": "Can Peguera",
+      "district": "Horta-Guinardó",
+      "avgPricePerM2": 13.5,
+      "avgMonthlyPrice": 702,
+      "avgSurface": 52,
+      "center_lat": 41.4430,
+      "center_lng": 2.1745
+    },
+    {
+      "name": "Vilapicina i la Torre Llobeta",
+      "district": "Nou Barris",
+      "avgPricePerM2": 17.0,
+      "avgMonthlyPrice": 986,
+      "avgSurface": 58,
+      "center_lat": 41.4340,
+      "center_lng": 2.1790
+    },
+    {
+      "name": "Porta",
+      "district": "Nou Barris",
+      "avgPricePerM2": 16.5,
+      "avgMonthlyPrice": 941,
+      "avgSurface": 57,
+      "center_lat": 41.4395,
+      "center_lng": 2.1790
+    },
+    {
+      "name": "El Turó de la Peira",
+      "district": "Nou Barris",
+      "avgPricePerM2": 16.0,
+      "avgMonthlyPrice": 912,
+      "avgSurface": 57,
+      "center_lat": 41.4368,
+      "center_lng": 2.1845
+    },
+    {
+      "name": "La Guineueta",
+      "district": "Nou Barris",
+      "avgPricePerM2": 16.5,
+      "avgMonthlyPrice": 957,
+      "avgSurface": 58,
+      "center_lat": 41.4465,
+      "center_lng": 2.1815
+    },
+    {
+      "name": "Canyelles",
+      "district": "Nou Barris",
+      "avgPricePerM2": 15.0,
+      "avgMonthlyPrice": 840,
+      "avgSurface": 56,
+      "center_lat": 41.4490,
+      "center_lng": 2.1735
+    },
+    {
+      "name": "Les Roquetes",
+      "district": "Nou Barris",
+      "avgPricePerM2": 14.5,
+      "avgMonthlyPrice": 798,
+      "avgSurface": 55,
+      "center_lat": 41.4490,
+      "center_lng": 2.1640
+    },
+    {
+      "name": "Verdun",
+      "district": "Nou Barris",
+      "avgPricePerM2": 15.5,
+      "avgMonthlyPrice": 884,
+      "avgSurface": 57,
+      "center_lat": 41.4460,
+      "center_lng": 2.1750
+    },
+    {
+      "name": "La Prosperitat",
+      "district": "Nou Barris",
+      "avgPricePerM2": 16.0,
+      "avgMonthlyPrice": 912,
+      "avgSurface": 57,
+      "center_lat": 41.4430,
+      "center_lng": 2.1865
+    },
+    {
+      "name": "La Trinitat Nova",
+      "district": "Nou Barris",
+      "avgPricePerM2": 14.0,
+      "avgMonthlyPrice": 770,
+      "avgSurface": 55,
+      "center_lat": 41.4510,
+      "center_lng": 2.1770
+    },
+    {
+      "name": "Torre Baró",
+      "district": "Nou Barris",
+      "avgPricePerM2": 12.5,
+      "avgMonthlyPrice": 663,
+      "avgSurface": 53,
+      "center_lat": 41.4580,
+      "center_lng": 2.1635
+    },
+    {
+      "name": "Vallbona",
+      "district": "Nou Barris",
+      "avgPricePerM2": 12.0,
+      "avgMonthlyPrice": 624,
+      "avgSurface": 52,
+      "center_lat": 41.4600,
+      "center_lng": 2.1730
+    },
+    {
+      "name": "Ciutat Meridiana",
+      "district": "Nou Barris",
+      "avgPricePerM2": 12.5,
+      "avgMonthlyPrice": 663,
+      "avgSurface": 53,
+      "center_lat": 41.4660,
+      "center_lng": 2.1690
+    },
+    {
+      "name": "Sant Andreu",
+      "district": "Sant Andreu",
+      "avgPricePerM2": 18.5,
+      "avgMonthlyPrice": 1110,
+      "avgSurface": 60,
+      "center_lat": 41.4338,
+      "center_lng": 2.1893
+    },
+    {
+      "name": "La Sagrera",
+      "district": "Sant Andreu",
+      "avgPricePerM2": 18.0,
+      "avgMonthlyPrice": 1062,
+      "avgSurface": 59,
+      "center_lat": 41.4190,
+      "center_lng": 2.1890
+    },
+    {
+      "name": "El Congrés i els Indians",
+      "district": "Sant Andreu",
+      "avgPricePerM2": 17.5,
+      "avgMonthlyPrice": 1015,
+      "avgSurface": 58,
+      "center_lat": 41.4210,
+      "center_lng": 2.1960
+    },
+    {
+      "name": "Navas",
+      "district": "Sant Andreu",
+      "avgPricePerM2": 18.5,
+      "avgMonthlyPrice": 1092,
+      "avgSurface": 59,
+      "center_lat": 41.4145,
+      "center_lng": 2.1890
+    },
+    {
+      "name": "El Bon Pastor",
+      "district": "Sant Andreu",
+      "avgPricePerM2": 16.0,
+      "avgMonthlyPrice": 912,
+      "avgSurface": 57,
+      "center_lat": 41.4390,
+      "center_lng": 2.2060
+    },
+    {
+      "name": "Baró de Viver",
+      "district": "Sant Andreu",
+      "avgPricePerM2": 14.0,
+      "avgMonthlyPrice": 756,
+      "avgSurface": 54,
+      "center_lat": 41.4490,
+      "center_lng": 2.1980
+    },
+    {
+      "name": "La Trinitat Vella",
+      "district": "Sant Andreu",
+      "avgPricePerM2": 14.5,
+      "avgMonthlyPrice": 798,
+      "avgSurface": 55,
+      "center_lat": 41.4548,
+      "center_lng": 2.1913
+    },
+    {
+      "name": "El Poblenou",
+      "district": "Sant Martí",
+      "avgPricePerM2": 25.5,
+      "avgMonthlyPrice": 1734,
+      "avgSurface": 68,
+      "center_lat": 41.4025,
+      "center_lng": 2.1990
+    },
+    {
+      "name": "La Vila Olímpica del Poblenou",
+      "district": "Sant Martí",
+      "avgPricePerM2": 27.0,
+      "avgMonthlyPrice": 1890,
+      "avgSurface": 70,
+      "center_lat": 41.3883,
+      "center_lng": 2.1978
+    },
+    {
+      "name": "Diagonal Mar i el Front Marítim del Poblenou",
+      "district": "Sant Martí",
+      "avgPricePerM2": 25.0,
+      "avgMonthlyPrice": 1800,
+      "avgSurface": 72,
+      "center_lat": 41.4098,
+      "center_lng": 2.2160
+    },
+    {
+      "name": "El Camp de l'Arpa del Clot",
+      "district": "Sant Martí",
+      "avgPricePerM2": 22.5,
+      "avgMonthlyPrice": 1463,
+      "avgSurface": 65,
+      "center_lat": 41.4085,
+      "center_lng": 2.1820
+    },
+    {
+      "name": "El Clot",
+      "district": "Sant Martí",
+      "avgPricePerM2": 22.0,
+      "avgMonthlyPrice": 1386,
+      "avgSurface": 63,
+      "center_lat": 41.4125,
+      "center_lng": 2.1890
+    },
+    {
+      "name": "El Parc i la Llacuna del Poblenou",
+      "district": "Sant Martí",
+      "avgPricePerM2": 24.0,
+      "avgMonthlyPrice": 1608,
+      "avgSurface": 67,
+      "center_lat": 41.3978,
+      "center_lng": 2.1935
+    },
+    {
+      "name": "El Besòs i el Maresme",
+      "district": "Sant Martí",
+      "avgPricePerM2": 18.5,
+      "avgMonthlyPrice": 1073,
+      "avgSurface": 58,
+      "center_lat": 41.4195,
+      "center_lng": 2.2165
+    },
+    {
+      "name": "Provençals del Poblenou",
+      "district": "Sant Martí",
+      "avgPricePerM2": 22.0,
+      "avgMonthlyPrice": 1408,
+      "avgSurface": 64,
+      "center_lat": 41.4068,
+      "center_lng": 2.2105
+    },
+    {
+      "name": "Sant Martí de Provençals",
+      "district": "Sant Martí",
+      "avgPricePerM2": 20.0,
+      "avgMonthlyPrice": 1220,
+      "avgSurface": 61,
+      "center_lat": 41.4155,
+      "center_lng": 2.2095
+    },
+    {
+      "name": "La Verneda i la Pau",
+      "district": "Sant Martí",
+      "avgPricePerM2": 18.5,
+      "avgMonthlyPrice": 1092,
+      "avgSurface": 59,
+      "center_lat": 41.4230,
+      "center_lng": 2.2185
+    },
+    {
+      "name": "El Raval",
+      "district": "Ciutat Vella",
+      "avgPricePerM2": 24.0,
+      "avgMonthlyPrice": 1248,
+      "avgSurface": 52,
+      "center_lat": 41.3793,
+      "center_lng": 2.1697
+    },
+    {
+      "name": "El Barri Gòtic",
+      "district": "Ciutat Vella",
+      "avgPricePerM2": 28.0,
+      "avgMonthlyPrice": 1484,
+      "avgSurface": 53,
+      "center_lat": 41.3827,
+      "center_lng": 2.1766
+    },
+    {
+      "name": "La Barceloneta",
+      "district": "Ciutat Vella",
+      "avgPricePerM2": 26.0,
+      "avgMonthlyPrice": 1300,
+      "avgSurface": 50,
+      "center_lat": 41.3774,
+      "center_lng": 2.1870
+    },
+    {
+      "name": "Sant Pere, Santa Caterina i la Ribera",
+      "district": "Ciutat Vella",
+      "avgPricePerM2": 26.5,
+      "avgMonthlyPrice": 1431,
+      "avgSurface": 54,
+      "center_lat": 41.3840,
+      "center_lng": 2.1823
+    }
+  ]
+}

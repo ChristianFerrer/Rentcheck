@@ -5,6 +5,7 @@
  */
 
 import type { MarketContext } from "@/types";
+import { getDistrictForZone } from "@/lib/algorithm/zones";
 
 const SOCRATA_BASE =
   "https://analisi.transparenciacatalunya.cat/resource";
@@ -182,8 +183,9 @@ export const DISTRICT_FACTOR_ALIASES: Record<string, string> = {
  */
 export async function getZonePricePerM2(zoneName: string): Promise<number> {
   const stats = await fetchBarcelonaRentalStats();
-  const normalizedName =
-    DISTRICT_FACTOR_ALIASES[zoneName] ?? zoneName;
+  // Resolve barrio → district → factor
+  const district = getDistrictForZone(zoneName);
+  const normalizedName = DISTRICT_FACTOR_ALIASES[district] ?? district;
   const factor = DISTRICT_FACTORS[normalizedName] ?? 1.0;
   return Math.round(stats.avgPricePerM2 * factor * 10) / 10;
 }
@@ -194,7 +196,8 @@ export async function getZonePricePerM2(zoneName: string): Promise<number> {
  */
 export async function getMarketContext(zoneName: string): Promise<MarketContext> {
   const { latest, history } = await fetchFullData();
-  const normalizedName = DISTRICT_FACTOR_ALIASES[zoneName] ?? zoneName;
+  const district = getDistrictForZone(zoneName);
+  const normalizedName = DISTRICT_FACTOR_ALIASES[district] ?? district;
   const districtFactor = DISTRICT_FACTORS[normalizedName] ?? 1.0;
   const districtAvgPricePerM2 =
     Math.round(latest.avgPricePerM2 * districtFactor * 10) / 10;

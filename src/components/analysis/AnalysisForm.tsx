@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { BARCELONA_ZONES } from "@/lib/algorithm/zones";
+import { BARRIOS_BY_DISTRICT, DISTRICT_ORDER, BARCELONA_BARRIOS } from "@/lib/algorithm/zones";
 import type { Condition } from "@/types";
 import type { ScrapedListing } from "@/lib/scraper/urlParser";
 
@@ -35,7 +35,7 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
 
   const [form, setForm] = useState({
     city: "barcelona",
-    zone_name: BARCELONA_ZONES[0].zone_name,
+    zone_name: BARCELONA_BARRIOS[0].zone_name,
     price_monthly: "",
     sqm: "",
     bedrooms: "2",
@@ -188,16 +188,20 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
             </select>
           </div>
           <div>
-            <label className="label-base">Zona</label>
+            <label className="label-base">Barrio</label>
             <select
               className="input-base"
               value={form.zone_name}
               onChange={(e) => setForm({ ...form, zone_name: e.target.value })}
             >
-              {BARCELONA_ZONES.map((z) => (
-                <option key={z.id} value={z.zone_name}>
-                  {z.zone_name}
-                </option>
+              {DISTRICT_ORDER.filter((d) => BARRIOS_BY_DISTRICT[d]).map((district) => (
+                <optgroup key={district} label={district}>
+                  {BARRIOS_BY_DISTRICT[district].map((b) => (
+                    <option key={b.id} value={b.zone_name}>
+                      {b.zone_name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>

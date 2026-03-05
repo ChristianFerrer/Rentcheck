@@ -4,29 +4,34 @@ import type {
   ExplanationFactor,
   AnalysisResult,
 } from "@/types";
+import { getBarrioByName } from "@/lib/algorithm/zones";
 import districtData from "@/data/barcelona-districts.json";
 
 const RANGE_PCT = 0.07; // ±7%
 
 // Size elasticity: for each 100% deviation from avg surface, price/m² moves ~35%
-// e.g. a 30m² piso in a zone averaging 60m² → +17.5% €/m²
 // Based on Barcelona market data: smaller units command significant €/m² premium
 const SIZE_ELASTICITY = 0.35;
 const MAX_SIZE_CORRECTION = 0.25; // cap at ±25%
 
-// Zone name aliases to match district JSON entries
-const ZONE_ALIASES: Record<string, string> = {
+// District name aliases for fallback lookup
+const DISTRICT_ALIASES: Record<string, string> = {
   Sarrià: "Sarrià-Sant Gervasi",
   Sants: "Sants-Montjuïc",
   Horta: "Horta-Guinardó",
 };
 
-function getDistrictAvgSurface(zoneName: string): number {
-  const normalized = ZONE_ALIASES[zoneName] ?? zoneName;
+function getZoneAvgSurface(zoneName: string): number {
+  // 1. Try barrio-level data first
+  const barrio = getBarrioByName(zoneName);
+  if (barrio) return barrio.avgSurface;
+
+  // 2. Fall back to district-level data
+  const normalized = DISTRICT_ALIASES[zoneName] ?? zoneName;
   const district = districtData.districts.find(
     (d) => d.name.toLowerCase() === normalized.toLowerCase()
   );
-  return district?.avgSurface ?? 60; // 60m² default (Barcelona city avg)
+  return district?.avgSurface ?? 60; // 60m² — Barcelona city avg
 }
 
 export interface EstimationOutput {
@@ -49,7 +54,7 @@ export function estimatePrice(
   // ── Size correction ──────────────────────────────────────────────────────────
   // Smaller apartments command a higher €/m² than larger ones in the same zone.
   // We correct the base price using how far this piso deviates from the zone avg.
-  const avgSurface = getDistrictAvgSurface(input.zone_name);
+  const avgSurface = getZoneAvgSurface(input.zone_name);
   const deviation = (avgSurface - input.sqm) / avgSurface;
   const rawCorrection = SIZE_ELASTICITY * deviation;
   const sizeCorrection = Math.max(

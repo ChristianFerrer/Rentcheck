@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { estimatePrice, buildAnalysisResult } from "@/lib/algorithm/estimator";
-import { getZoneByName, BARCELONA_ZONES } from "@/lib/algorithm/zones";
+import { getZoneByName, getBarrioByName, BARCELONA_ZONES } from "@/lib/algorithm/zones";
 import { generateComparables } from "@/lib/algorithm/comparables";
 import { createAdminClient } from "@/lib/supabase/server";
-import { getZonePricePerM2, getMarketContext } from "@/lib/generalitat/api";
+import { getZonePricePerM2, getMarketContext, fetchBarcelonaRentalStats } from "@/lib/generalitat/api";
 import type { ListingInput } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -45,11 +45,27 @@ export async function POST(request: NextRequest) {
       bills_included: Boolean(body.bills_included),
     };
 
-    // Get zone reference price — try live Generalitat API first, fall back to static
+    // Get zone reference price
+    // Priority: barrio static price calibrated to live Generalitat avg
+    //           → district-level Generalitat API
+    //           → static fallback
+    const barrio = getBarrioByName(input.zone_name);
     const zone = getZoneByName(input.zone_name);
     const staticRef = zone?.eur_m2_ref ?? BARCELONA_ZONES[0].eur_m2_ref;
+
+    // Base city avg used when the barrio JSON was built (2025-T1)
+    const BASE_CITY_AVG = 23.8;
+
     const [eur_m2_ref, marketContext] = await Promise.all([
-      getZonePricePerM2(input.zone_name).catch(() => staticRef),
+      (async () => {
+        if (barrio) {
+          // Calibrate barrio price proportionally against live city average
+          const stats = await fetchBarcelonaRentalStats().catch(() => null);
+          const liveAvg = stats?.avgPricePerM2 ?? BASE_CITY_AVG;
+          return Math.round((barrio.eur_m2_ref * (liveAvg / BASE_CITY_AVG)) * 10) / 10;
+        }
+        return getZonePricePerM2(input.zone_name).catch(() => staticRef);
+      })(),
       getMarketContext(input.zone_name).catch(() => null),
     ]);
 
