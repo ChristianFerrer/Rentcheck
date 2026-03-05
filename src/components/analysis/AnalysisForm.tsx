@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import AuthModal from "@/components/auth/AuthModal";
+import { createClient } from "@/lib/supabase/client";
 import { BARRIOS_BY_DISTRICT, DISTRICT_ORDER, BARCELONA_BARRIOS } from "@/lib/algorithm/zones";
 import type { Condition } from "@/types";
 import type { ScrapedListing } from "@/lib/scraper/urlParser";
+
+const PENDING_FORM_KEY = "rentcheck_pending_form";
 
 interface Props {
   sourceUrl?: string;
@@ -32,6 +36,10 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const pendingSubmitRef = useRef(false);
+
+  const supabase = createClient();
 
   const [form, setForm] = useState({
     city: "barcelona",
@@ -47,6 +55,19 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
     condition: "bueno" as Condition,
     bills_included: false,
   });
+
+  // Restore form data saved before Google OAuth redirect
+  useEffect(() => {
+    const pending = sessionStorage.getItem(PENDING_FORM_KEY);
+    if (!pending) return;
+    try {
+      const saved = JSON.parse(pending);
+      sessionStorage.removeItem(PENDING_FORM_KEY);
+      setForm((prev) => ({ ...prev, ...saved }));
+    } catch {
+      sessionStorage.removeItem(PENDING_FORM_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     if (prefillExample) fillExample();
@@ -98,20 +119,16 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
     });
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (!form.price_monthly || !form.sqm) {
-      setError("El precio y los metros cuadrados son obligatorios.");
-      return;
-    }
-
+  async function submitAnalysis(authToken?: string) {
     setLoading(true);
+    setError("");
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+
       const res = await fetch("/api/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           source_url: sourceUrl || undefined,
           city: form.city,
@@ -130,13 +147,11 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         setError(data.error || "Error al analizar el anuncio.");
         return;
       }
 
-      // If saved in DB, navigate by ID; otherwise pass via session storage
       if (data.id) {
         router.push(`/resultado/${data.id}`);
       } else {
@@ -150,7 +165,46 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
     }
   }
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (!form.price_monthly || !form.sqm) {
+      setError("El precio y los metros cuadrados son obligatorios.");
+      return;
+    }
+
+    // Check auth — if not logged in, intercept and show modal
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setShowAuthModal(true);
+      pendingSubmitRef.current = true;
+      return;
+    }
+
+    await submitAnalysis(session.access_token);
+  }
+
+  function handleContinueAsGuest() {
+    setShowAuthModal(false);
+    pendingSubmitRef.current = false;
+    submitAnalysis(); // no token → result won't be saved
+  }
+
+  function handleGoogleRedirect() {
+    // Save current form to sessionStorage before OAuth redirect
+    sessionStorage.setItem(PENDING_FORM_KEY, JSON.stringify(form));
+  }
+
   return (
+    <>
+    {showAuthModal && (
+      <AuthModal
+        onContinueAsGuest={handleContinueAsGuest}
+        onClose={() => setShowAuthModal(false)}
+        onGoogleRedirect={handleGoogleRedirect}
+      />
+    )}
     <div className="max-w-2xl mx-auto card p-8 text-left animate-slide-up">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900">
@@ -413,5 +467,6 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
         </button>
       </form>
     </div>
+    </>
   );
 }
