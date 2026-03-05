@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function BookmarkletPage() {
   const [bookmarkletHref, setBookmarkletHref] = useState("#");
@@ -67,9 +68,7 @@ export default function BookmarkletPage() {
                   draggable
                   title="Arrastra este botón a tus favoritos"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
+                  <Image src="/house.png" alt="" width={18} height={18} className="rounded" />
                   Analizar en Rentcheck
                 </a>
                 <span className="text-gray-400 text-xs">← arrastra esto</span>

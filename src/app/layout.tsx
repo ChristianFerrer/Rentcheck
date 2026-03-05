@@ -9,11 +9,16 @@ export const metadata: Metadata = {
     "Analiza cualquier anuncio de alquiler y descubre si el precio está inflado o por debajo del mercado. Radar de oportunidades incluido.",
   keywords: ["alquiler", "piso", "barcelona", "precio", "análisis", "mercado"],
   authors: [{ name: "RentCheck" }],
+  icons: {
+    icon: "/house.png",
+    apple: "/house.png",
+  },
   openGraph: {
     title: "RentCheck — ¿Este piso está caro o es una oportunidad?",
     description:
       "Analiza cualquier anuncio de alquiler y descubre si el precio está inflado o por debajo del mercado.",
     type: "website",
+    images: ["/house.png"],
   },
 };
 
