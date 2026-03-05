@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import AnalysisForm from "./AnalysisForm";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import type { ScrapedListing } from "@/lib/scraper/urlParser";
@@ -16,6 +17,38 @@ export default function UrlInputForm() {
   const [scraped, setScraped] = useState<ScrapedListing | null>(null);
   const [loading, setLoading] = useState(false);
   const [scrapeError, setScrapeError] = useState("");
+  const bookmarkletSubmitted = useRef(false);
+
+  // Bookmarklet: auto-populate paste form when arriving from ?bm=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("bm") !== "1") return;
+
+    const textParam = params.get("text") ?? "";
+    const urlParam = params.get("url") ?? "";
+
+    // Clean the URL immediately so sharing/refresh doesn't re-trigger
+    window.history.replaceState({}, "", window.location.pathname);
+
+    if (textParam.length < 50) return;
+
+    setMode("paste");
+    setPastedText(textParam);
+    if (urlParam) setUrl(urlParam);
+    bookmarkletSubmitted.current = false;
+  }, []);
+
+  // Auto-submit once pastedText is populated by the bookmarklet
+  useEffect(() => {
+    if (bookmarkletSubmitted.current) return;
+    if (mode !== "paste" || pastedText.length < 50) return;
+    // Only auto-submit when we just came from the bookmarklet (URL was cleaned)
+    // We detect this by checking if url looks like an Idealista listing
+    if (!url.includes("idealista.com/inmueble/") && !url.includes("fotocasa") && !url.includes("habitaclia")) return;
+    bookmarkletSubmitted.current = true;
+    submitPaste(pastedText, url);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pastedText, mode, url]);
 
   async function handleUrl(e: React.FormEvent) {
     e.preventDefault();
@@ -43,10 +76,7 @@ export default function UrlInputForm() {
     }
   }
 
-  async function handlePaste(e: React.FormEvent) {
-    e.preventDefault();
-    if (!pastedText.trim()) return;
-
+  async function submitPaste(text: string, sourceUrl: string) {
     setLoading(true);
     setScrapeError("");
 
@@ -54,7 +84,7 @@ export default function UrlInputForm() {
       const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: pastedText, url }),
+        body: JSON.stringify({ text, url: sourceUrl }),
       });
       const data = await res.json();
 
@@ -71,6 +101,12 @@ export default function UrlInputForm() {
       setLoading(false);
       setShowManual(true);
     }
+  }
+
+  async function handlePaste(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pastedText.trim()) return;
+    await submitPaste(pastedText, url);
   }
 
   function handleExample() {
@@ -121,19 +157,23 @@ export default function UrlInputForm() {
               <span>{scrapeError}</span>
             </div>
             {mode === "url" && (
-              <div className="border-t border-amber-200 px-3 py-2 bg-amber-100 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <span className="text-xs text-amber-700 font-medium">Alternativa rápida:</span>
+              <div className="border-t border-amber-200 px-3 py-2 bg-amber-100 flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-wrap">
+                <span className="text-xs text-amber-700 font-medium">Alternativas:</span>
                 <button
                   type="button"
                   onClick={() => { setShowManual(false); setMode("paste"); setScrapeError(""); }}
                   className="text-xs font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
                 >
-                  Pegar el texto del anuncio (funciona siempre)
+                  Pegar el texto del anuncio
                 </button>
                 <span className="text-amber-400 hidden sm:inline">·</span>
-                <span className="text-xs text-amber-600">
-                  Abre Idealista → Ctrl+A → Ctrl+C → pega aquí
-                </span>
+                <Link
+                  href="/bookmarklet"
+                  target="_blank"
+                  className="text-xs font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
+                >
+                  Instalar bookmarklet (1 clic en Idealista)
+                </Link>
               </div>
             )}
           </div>
@@ -277,6 +317,13 @@ export default function UrlInputForm() {
         >
           Introducir datos manualmente
         </button>
+        <span className="text-gray-300">·</span>
+        <Link
+          href="/bookmarklet"
+          className="text-sm text-gray-500 hover:text-brand-600 transition-colors underline underline-offset-4"
+        >
+          Instalar bookmarklet
+        </Link>
         <span className="text-gray-300">·</span>
         <button
           onClick={handleExample}
