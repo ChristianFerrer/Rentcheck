@@ -603,10 +603,20 @@ export async function GET(req: NextRequest) {
   }
 
   if (!listing || countFields(listing) === 0) {
+    const isDebug = req.nextUrl.searchParams.get("debug") === "1";
     return NextResponse.json(
       {
         error:
           "No se pudo leer el anuncio. El portal bloquea el acceso automatizado. Puedes pegar el texto del anuncio directamente.",
+        ...(isDebug && {
+          _debug: {
+            scrapingBeeConfigured: !!process.env.SCRAPINGBEE_API_KEY,
+            firecrawlConfigured: !!process.env.FIRECRAWL_API_KEY,
+            jinaConfigured: !!process.env.JINA_API_KEY,
+            anthropicConfigured: !!process.env.ANTHROPIC_API_KEY,
+            pageTextLength: pageText?.length ?? 0,
+          },
+        }),
       },
       { status: 422 }
     );
