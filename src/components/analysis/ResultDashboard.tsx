@@ -27,6 +27,7 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
   const eurM2Ref = result.eur_m2_ref;
   const [copied, setCopied] = useState(false);
   const [copiedNegotiation, setCopiedNegotiation] = useState(false);
+  const [salary, setSalary] = useState("");
 
   function handleCopyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -42,6 +43,14 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
     });
   }
 
+  function handlePrint() {
+    window.print();
+  }
+
+  const salaryNum = Number(salary);
+  const rentPct = salaryNum > 0 ? (result.price_monthly / salaryNum) * 100 : null;
+  const affordablePrice = salaryNum > 0 ? Math.round(salaryNum * 0.30) : null;
+
   const labelColors: Record<string, string> = {
     BAJO: "from-green-500 to-emerald-600",
     MEDIO: "from-yellow-500 to-amber-500",
@@ -50,8 +59,8 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
 
   return (
     <div className="container-app py-10 animate-fade-in">
-      {/* Back link */}
-      <div className="mb-8">
+      {/* Back link + PDF button */}
+      <div className="mb-8 flex items-center justify-between print-hide">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
@@ -61,6 +70,15 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
           </svg>
           Nuevo análisis
         </Link>
+        <button
+          onClick={handlePrint}
+          className="btn-secondary text-sm flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Descargar PDF
+        </button>
       </div>
 
       {/* Hero result card */}
@@ -269,6 +287,75 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
             </p>
           </div>
 
+          {/* Calculadora de accesibilidad */}
+          <div className="card p-6">
+            <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+              <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              ¿Puedes permitirte este piso?
+            </h2>
+            <p className="text-xs text-gray-400 mb-4">Regla del 30%: el alquiler no debería superar el 30% de tus ingresos netos.</p>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <label className="label-base">Tu salario neto mensual</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="2000"
+                    value={salary}
+                    onChange={(e) => setSalary(e.target.value)}
+                    className="input-base pr-10"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">€</span>
+                </div>
+              </div>
+            </div>
+            {rentPct !== null && affordablePrice !== null && (
+              <div className={`mt-4 rounded-xl p-4 ${
+                rentPct <= 30 ? "bg-green-50 border border-green-200" :
+                rentPct <= 40 ? "bg-amber-50 border border-amber-200" :
+                "bg-red-50 border border-red-200"
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-sm font-semibold ${
+                    rentPct <= 30 ? "text-green-800" :
+                    rentPct <= 40 ? "text-amber-800" :
+                    "text-red-800"
+                  }`}>
+                    {rentPct <= 30 ? "Asequible" : rentPct <= 40 ? "Ajustado" : "Por encima de lo recomendado"}
+                  </span>
+                  <span className={`text-2xl font-bold ${
+                    rentPct <= 30 ? "text-green-700" :
+                    rentPct <= 40 ? "text-amber-700" :
+                    "text-red-700"
+                  }`}>{rentPct.toFixed(0)}%</span>
+                </div>
+                <div className="w-full bg-white/60 rounded-full h-2 mb-3">
+                  <div
+                    className={`h-2 rounded-full transition-all ${
+                      rentPct <= 30 ? "bg-green-500" :
+                      rentPct <= 40 ? "bg-amber-500" :
+                      "bg-red-500"
+                    }`}
+                    style={{ width: `${Math.min(rentPct, 100)}%` }}
+                  />
+                </div>
+                <p className={`text-xs ${
+                  rentPct <= 30 ? "text-green-700" :
+                  rentPct <= 40 ? "text-amber-700" :
+                  "text-red-700"
+                }`}>
+                  {rentPct <= 30
+                    ? `Con tu salario de ${formatEur(salaryNum)}, este piso está dentro de lo recomendado.`
+                    : `Para que sea asequible deberías pagar máximo ${formatEur(affordablePrice)}/mes o ganar ${formatEur(Math.round(result.price_monthly / 0.30))}/mes.`
+                  }
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Generalitat official market data */}
           {marketContext && (
             <div className="card p-6">
@@ -347,7 +434,7 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
               </p>
               <button
                 onClick={handleCopyNegotiation}
-                className="mt-4 btn-secondary text-sm py-2 px-4"
+                className="mt-4 btn-secondary text-sm py-2 px-4 print-hide"
               >
                 {copiedNegotiation ? "¡Copiado!" : "Copiar texto"}
               </button>
@@ -355,7 +442,7 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
           )}
 
           {/* CTA */}
-          <div className="card p-6 bg-brand-50 border-brand-100">
+          <div className="card p-6 bg-brand-50 border-brand-100 print-hide">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h3 className="font-semibold text-gray-900 mb-1">

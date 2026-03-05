@@ -49,6 +49,12 @@ export default function Header() {
             >
               Radar
             </Link>
+            <Link
+              href="/mis-analisis"
+              className={`btn-ghost text-sm ${pathname === "/mis-analisis" ? "text-brand-600 bg-brand-50" : ""}`}
+            >
+              Historial
+            </Link>
           </nav>
 
           {/* Auth + mobile toggle */}
@@ -92,6 +98,15 @@ export default function Header() {
               }`}
             >
               Radar
+            </Link>
+            <Link
+              href="/mis-analisis"
+              onClick={() => setMobileOpen(false)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                pathname === "/mis-analisis" ? "text-brand-600 bg-brand-50" : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Historial
             </Link>
           </nav>
         )}
