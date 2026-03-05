@@ -26,15 +26,16 @@ export async function GET(req: NextRequest) {
     tests: {},
   };
 
-  // Test ScrapingBee (standard proxy, 5 credits)
+  // Test ScrapingBee with premium proxy (required for Idealista)
   if (scrapingBeeKey) {
     try {
       const params = new URLSearchParams({
         api_key: scrapingBeeKey,
         url,
         render_js: "true",
+        premium_proxy: "true",
         block_resources: "false",
-        wait: "2000",
+        wait: "5000",
       });
       const res = await fetch(`https://app.scrapingbee.com/api/v1/?${params}`, {
         signal: AbortSignal.timeout(30000),
