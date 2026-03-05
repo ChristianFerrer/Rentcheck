@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import AuthModal from "@/components/auth/AuthModal";
 
@@ -43,12 +44,13 @@ export default function AuthButton() {
       <button onClick={() => setShowModal(true)} className="btn-secondary text-sm py-2 px-4">
         Acceder
       </button>
-      {showModal && (
+      {showModal && createPortal(
         <AuthModal
           onClose={() => setShowModal(false)}
           onContinueAsGuest={() => setShowModal(false)}
           onGoogleRedirect={() => {}}
-        />
+        />,
+        document.body
       )}
     </>
   );
