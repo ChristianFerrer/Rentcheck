@@ -133,6 +133,34 @@ function detectZoneFromUrl(url: string): string | undefined {
 
 // ─── Fetch strategies ───────────────────────────────────────────────────────
 
+// ─── ScrapingBee (primary: handles Cloudflare with real Chrome) ─────────────
+
+async function fetchViaScrapingBee(url: string): Promise<string | null> {
+  const apiKey = process.env.SCRAPINGBEE_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      url,
+      render_js: "true",
+      premium_proxy: "true",
+      block_resources: "false",
+      country_code: "es",
+    });
+    const res = await fetch(`https://app.scrapingbee.com/api/v1/?${params}`, {
+      signal: AbortSignal.timeout(60000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    if (html.length < 500) return null;
+    if (html.includes("Just a moment") || html.includes("cf-browser-verification")) return null;
+    return extractTextFromHtml(html);
+  } catch {
+    return null;
+  }
+}
+
 async function fetchViaFirecrawl(url: string): Promise<string | null> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return null;
@@ -144,15 +172,29 @@ async function fetchViaFirecrawl(url: string): Promise<string | null> {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url, formats: ["markdown"] }),
-      signal: AbortSignal.timeout(30000),
+      body: JSON.stringify({
+        url,
+        formats: ["markdown"],
+        waitFor: 3000,
+        onlyMainContent: false,
+        timeout: 40000,
+      }),
+      signal: AbortSignal.timeout(50000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error("[Firecrawl] HTTP error:", res.status, await res.text().catch(() => ""));
+      return null;
+    }
     const json = await res.json();
+    if (!json?.success && !json?.data) {
+      console.error("[Firecrawl] API error:", JSON.stringify(json));
+      return null;
+    }
     const markdown = json?.data?.markdown ?? json?.markdown ?? "";
     if (typeof markdown === "string" && markdown.length > 200) return markdown;
     return null;
-  } catch {
+  } catch (e) {
+    console.error("[Firecrawl] Exception:", e);
     return null;
   }
 }
@@ -194,15 +236,22 @@ async function fetchDirectHtml(url: string): Promise<string | null> {
 
 async function fetchViaJina(url: string): Promise<string | null> {
   try {
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "X-Return-Format": "markdown",
+      "Accept-Language": "es-ES,es;q=0.9",
+    };
+    const jinaKey = process.env.JINA_API_KEY;
+    if (jinaKey) headers["Authorization"] = `Bearer ${jinaKey}`;
+
     const res = await fetch(`https://r.jina.ai/${url}`, {
-      headers: {
-        Accept: "application/json",
-        "X-Return-Format": "markdown",
-        "Accept-Language": "es-ES,es;q=0.9",
-      },
-      signal: AbortSignal.timeout(25000),
+      headers,
+      signal: AbortSignal.timeout(35000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error("[Jina] HTTP error:", res.status);
+      return null;
+    }
 
     const ct = res.headers.get("content-type") || "";
     if (ct.includes("json")) {
@@ -216,7 +265,8 @@ async function fetchViaJina(url: string): Promise<string | null> {
     if (text.includes("Just a moment") || text.includes("Access denied"))
       return null;
     return text;
-  } catch {
+  } catch (e) {
+    console.error("[Jina] Exception:", e);
     return null;
   }
 }
@@ -492,24 +542,35 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing url param" }, { status: 400 });
   }
 
-  // Step 1: Fetch page content — Firecrawl → Direct HTML → Jina (in order)
+  // Step 1: Fetch page content — ScrapingBee → Firecrawl → Jina → Direct HTML
   let pageText: string | null = null;
 
-  // 1a. Firecrawl (best at bypassing bot protection)
-  pageText = await fetchViaFirecrawl(url);
+  // 1a. ScrapingBee (real Chrome, handles Cloudflare — best for ES portals)
+  pageText = await fetchViaScrapingBee(url);
+  if (pageText) console.log("[Scrape] ScrapingBee success, length:", pageText.length);
 
-  // 1b. Direct HTML fetch
+  // 1b. Firecrawl (JS rendering with waitFor)
+  if (!pageText || pageText.length < 200) {
+    pageText = await fetchViaFirecrawl(url);
+    if (pageText) console.log("[Scrape] Firecrawl success, length:", pageText.length);
+  }
+
+  // 1c. Jina.ai proxy (free reader, works for many non-Cloudflare sites)
+  if (!pageText || pageText.length < 200) {
+    const jinaText = await fetchViaJina(url);
+    if (jinaText) {
+      pageText = jinaText;
+      console.log("[Scrape] Jina success, length:", pageText.length);
+    }
+  }
+
+  // 1d. Direct HTML fetch (last resort, blocked by most ES portals)
   if (!pageText || pageText.length < 200) {
     const html = await fetchDirectHtml(url);
     if (html && html.length > 500) {
       pageText = extractTextFromHtml(html);
+      console.log("[Scrape] Direct HTML success, length:", pageText.length);
     }
-  }
-
-  // 1c. Jina.ai proxy
-  if (!pageText || pageText.length < 200) {
-    const jinaText = await fetchViaJina(url);
-    if (jinaText) pageText = jinaText;
   }
 
   // Step 2: Extract data
