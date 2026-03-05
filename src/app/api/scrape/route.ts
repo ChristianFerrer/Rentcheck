@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import type { ScrapedListing } from "@/lib/scraper/urlParser";
 
+// Allow up to 60 seconds on Vercel (works on Hobby + Pro)
+export const maxDuration = 60;
+
 // ─── Zone detection from URL slug ──────────────────────────────────────────
 
 const ZONE_SLUG_MAP: Record<string, string> = {
@@ -542,35 +545,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing url param" }, { status: 400 });
   }
 
-  // Step 1: Fetch page content — ScrapingBee → Firecrawl → Jina → Direct HTML
+  // Step 1: Race all fetch strategies in parallel — first valid response wins
+  const makeTextFetcher = (name: string, fn: () => Promise<string | null>) =>
+    fn().then((text) => {
+      if (!text || text.length < 200) throw new Error(`${name}: insufficient content`);
+      console.log(`[Scrape] ${name} won, length: ${text.length}`);
+      return text;
+    });
+
   let pageText: string | null = null;
-
-  // 1a. ScrapingBee (real Chrome, handles Cloudflare — best for ES portals)
-  pageText = await fetchViaScrapingBee(url);
-  if (pageText) console.log("[Scrape] ScrapingBee success, length:", pageText.length);
-
-  // 1b. Firecrawl (JS rendering with waitFor)
-  if (!pageText || pageText.length < 200) {
-    pageText = await fetchViaFirecrawl(url);
-    if (pageText) console.log("[Scrape] Firecrawl success, length:", pageText.length);
-  }
-
-  // 1c. Jina.ai proxy (free reader, works for many non-Cloudflare sites)
-  if (!pageText || pageText.length < 200) {
-    const jinaText = await fetchViaJina(url);
-    if (jinaText) {
-      pageText = jinaText;
-      console.log("[Scrape] Jina success, length:", pageText.length);
-    }
-  }
-
-  // 1d. Direct HTML fetch (last resort, blocked by most ES portals)
-  if (!pageText || pageText.length < 200) {
-    const html = await fetchDirectHtml(url);
-    if (html && html.length > 500) {
-      pageText = extractTextFromHtml(html);
-      console.log("[Scrape] Direct HTML success, length:", pageText.length);
-    }
+  try {
+    pageText = await Promise.any([
+      makeTextFetcher("ScrapingBee", () => fetchViaScrapingBee(url)),
+      makeTextFetcher("Firecrawl", () => fetchViaFirecrawl(url)),
+      makeTextFetcher("Jina", () => fetchViaJina(url)),
+      makeTextFetcher("DirectHTML", async () => {
+        const html = await fetchDirectHtml(url);
+        return html && html.length > 500 ? extractTextFromHtml(html) : null;
+      }),
+    ]);
+  } catch {
+    console.log("[Scrape] All strategies failed");
+    pageText = null;
   }
 
   // Step 2: Extract data
