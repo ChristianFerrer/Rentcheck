@@ -44,9 +44,11 @@ export async function GET(req: NextRequest) {
       results.tests.scrapingBee = {
         status: res.status,
         htmlLength: body.length,
-        isCloudflare:
-          body.includes("Just a moment") || body.includes("cf-browser-verification"),
-        preview: body.slice(0, 300),
+        isCloudflare: body.includes("Just a moment") || body.includes("cf-browser-verification"),
+        hasTurnstile: body.includes("turnstile") || body.includes("Turnstile"),
+        hasIdealista: body.includes("idealista") || body.includes("Idealista"),
+        hasPrice: body.includes("€") || body.includes("precio"),
+        preview: body.slice(0, 500),
       };
     } catch (e) {
       results.tests.scrapingBee = { error: String(e) };
