@@ -605,7 +605,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "No se pudo leer el anuncio. El portal bloquea el acceso automatizado. Puedes pegar el texto del anuncio directamente.",
+          "Idealista bloquea el acceso automatizado (protección DataDome). Para analizar este piso: abre el anuncio en el navegador, selecciona todo el texto (Ctrl+A), cópialo (Ctrl+C) y usa la opción «Pegar texto del anuncio».",
+        blocked: true,
         ...(isDebug && {
           _debug: {
             scrapingBeeConfigured: !!process.env.SCRAPINGBEE_API_KEY,
