@@ -133,6 +133,30 @@ function detectZoneFromUrl(url: string): string | undefined {
 
 // ─── Fetch strategies ───────────────────────────────────────────────────────
 
+async function fetchViaFirecrawl(url: string): Promise<string | null> {
+  const apiKey = process.env.FIRECRAWL_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url, formats: ["markdown"] }),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const markdown = json?.data?.markdown ?? json?.markdown ?? "";
+    if (typeof markdown === "string" && markdown.length > 200) return markdown;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchDirectHtml(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
@@ -442,42 +466,59 @@ function countFields(l: ScrapedListing): number {
   ).length;
 }
 
+// ─── Shared extraction pipeline ─────────────────────────────────────────────
+
+async function extractFromText(
+  pageText: string,
+  urlForRegexFallback: string
+): Promise<ScrapedListing | null> {
+  let listing = await extractWithAI(pageText);
+
+  if (!listing || countFields(listing) < 2) {
+    const regexResult = parseWithRegex(pageText, urlForRegexFallback);
+    listing = listing
+      ? { ...regexResult, ...listing } // merge: AI wins on overlap
+      : regexResult;
+  }
+
+  return listing;
+}
+
+// ─── GET: extract from URL ───────────────────────────────────────────────────
+
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
   if (!url) {
     return NextResponse.json({ error: "Missing url param" }, { status: 400 });
   }
 
-  // Step 1: Fetch page content via direct HTML or Jina
+  // Step 1: Fetch page content — Firecrawl → Direct HTML → Jina (in order)
   let pageText: string | null = null;
 
-  const html = await fetchDirectHtml(url);
-  if (html && html.length > 500) {
-    pageText = extractTextFromHtml(html);
+  // 1a. Firecrawl (best at bypassing bot protection)
+  pageText = await fetchViaFirecrawl(url);
+
+  // 1b. Direct HTML fetch
+  if (!pageText || pageText.length < 200) {
+    const html = await fetchDirectHtml(url);
+    if (html && html.length > 500) {
+      pageText = extractTextFromHtml(html);
+    }
   }
 
+  // 1c. Jina.ai proxy
   if (!pageText || pageText.length < 200) {
     const jinaText = await fetchViaJina(url);
     if (jinaText) pageText = jinaText;
   }
 
-  // Step 2: Extract data — AI first, regex as fallback
+  // Step 2: Extract data
   let listing: ScrapedListing | null = null;
-
   if (pageText) {
-    // Try AI extraction
-    listing = await extractWithAI(pageText);
-
-    // Fallback to regex if AI failed or returned too little
-    if (!listing || countFields(listing) < 2) {
-      const regexResult = parseWithRegex(pageText, url);
-      listing = listing
-        ? { ...regexResult, ...listing } // merge: AI wins on overlap
-        : regexResult;
-    }
+    listing = await extractFromText(pageText, url);
   }
 
-  // Step 3: Always try zone from URL as last resort
+  // Step 3: Zone from URL slug as last resort
   const urlZone = detectZoneFromUrl(url);
   if (urlZone && !listing?.zone_name) {
     listing = { ...(listing ?? {}), city: "barcelona", zone_name: urlZone };
@@ -487,8 +528,40 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "No se pudo leer el anuncio. El portal bloquea el acceso automatizado. Introduce los datos manualmente.",
+          "No se pudo leer el anuncio. El portal bloquea el acceso automatizado. Puedes pegar el texto del anuncio directamente.",
       },
+      { status: 422 }
+    );
+  }
+
+  return NextResponse.json({ city: "barcelona", ...listing });
+}
+
+// ─── POST: extract from pasted text ─────────────────────────────────────────
+
+export async function POST(req: NextRequest) {
+  let body: { text?: string; url?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const rawText = body.text?.trim() ?? "";
+  if (!rawText || rawText.length < 50) {
+    return NextResponse.json(
+      { error: "El texto pegado es demasiado corto para extraer datos." },
+      { status: 400 }
+    );
+  }
+
+  // Truncate to avoid excessive token usage
+  const truncated = rawText.slice(0, 8000);
+  const listing = await extractFromText(truncated, body.url ?? "");
+
+  if (!listing || countFields(listing) === 0) {
+    return NextResponse.json(
+      { error: "No se pudieron extraer datos del texto. Asegúrate de copiar el texto completo del anuncio." },
       { status: 422 }
     );
   }
