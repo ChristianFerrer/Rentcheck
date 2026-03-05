@@ -75,5 +75,30 @@ export async function GET(req: NextRequest) {
     results.tests.jina = { error: String(e) };
   }
 
+  // Test Firecrawl
+  if (firecrawlKey) {
+    try {
+      const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${firecrawlKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url, formats: ["markdown"], waitFor: 3000, timeout: 25000 }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const json = await res.json();
+      const markdown = json?.data?.markdown ?? json?.markdown ?? "";
+      results.tests.firecrawl = {
+        status: res.status,
+        success: json?.success,
+        markdownLength: typeof markdown === "string" ? markdown.length : 0,
+        preview: typeof markdown === "string" ? markdown.slice(0, 300) : JSON.stringify(json).slice(0, 300),
+      };
+    } catch (e) {
+      results.tests.firecrawl = { error: String(e) };
+    }
+  }
+
   return NextResponse.json(results, { status: 200 });
 }
