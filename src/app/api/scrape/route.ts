@@ -140,28 +140,49 @@ function detectZoneFromUrl(url: string): string | undefined {
 
 async function fetchViaScrapingBee(url: string): Promise<string | null> {
   const apiKey = process.env.SCRAPINGBEE_API_KEY;
-  if (!apiKey) return null;
-
-  try {
-    const params = new URLSearchParams({
-      api_key: apiKey,
-      url,
-      render_js: "true",
-      premium_proxy: "true",
-      block_resources: "false",
-      country_code: "es",
-    });
-    const res = await fetch(`https://app.scrapingbee.com/api/v1/?${params}`, {
-      signal: AbortSignal.timeout(60000),
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
-    if (html.length < 500) return null;
-    if (html.includes("Just a moment") || html.includes("cf-browser-verification")) return null;
-    return extractTextFromHtml(html);
-  } catch {
+  if (!apiKey) {
+    console.log("[ScrapingBee] No API key configured");
     return null;
   }
+
+  // Try without premium_proxy first (5 credits), then with premium (25 credits)
+  for (const usePremium of [false, true]) {
+    try {
+      const params = new URLSearchParams({
+        api_key: apiKey,
+        url,
+        render_js: "true",
+        block_resources: "false",
+        country_code: "es",
+        wait: "2000",
+      });
+      if (usePremium) params.set("premium_proxy", "true");
+
+      console.log(`[ScrapingBee] Trying ${usePremium ? "premium" : "standard"} proxy`);
+      const res = await fetch(`https://app.scrapingbee.com/api/v1/?${params}`, {
+        signal: AbortSignal.timeout(55000),
+      });
+
+      console.log(`[ScrapingBee] HTTP ${res.status}`);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.log(`[ScrapingBee] Error body: ${body.slice(0, 200)}`);
+        continue;
+      }
+
+      const html = await res.text();
+      console.log(`[ScrapingBee] HTML length: ${html.length}`);
+      if (html.length < 500) continue;
+      if (html.includes("Just a moment") || html.includes("cf-browser-verification")) {
+        console.log("[ScrapingBee] Cloudflare challenge detected, trying next");
+        continue;
+      }
+      return extractTextFromHtml(html);
+    } catch (e) {
+      console.log(`[ScrapingBee] Exception (premium=${usePremium}):`, e);
+    }
+  }
+  return null;
 }
 
 async function fetchViaFirecrawl(url: string): Promise<string | null> {

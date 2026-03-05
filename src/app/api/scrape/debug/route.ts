@@ -1,0 +1,70 @@
+import { NextRequest, NextResponse } from "next/server";
+
+export const maxDuration = 60;
+
+// Quick diagnostic: checks which services are configured and tests ScrapingBee
+export async function GET(req: NextRequest) {
+  const url = req.nextUrl.searchParams.get("url") ?? "https://www.idealista.com/inmueble/110463662/";
+
+  const scrapingBeeKey = process.env.SCRAPINGBEE_API_KEY;
+  const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+  const jinaKey = process.env.JINA_API_KEY;
+
+  const results: Record<string, unknown> = {
+    config: {
+      scrapingBee: scrapingBeeKey ? `set (${scrapingBeeKey.slice(0, 8)}...)` : "NOT SET",
+      firecrawl: firecrawlKey ? `set (${firecrawlKey.slice(0, 8)}...)` : "NOT SET",
+      jina: jinaKey ? `set (${jinaKey.slice(0, 8)}...)` : "not set (optional)",
+    },
+    tests: {} as Record<string, unknown>,
+  };
+
+  // Test ScrapingBee (standard proxy, 5 credits)
+  if (scrapingBeeKey) {
+    try {
+      const params = new URLSearchParams({
+        api_key: scrapingBeeKey,
+        url,
+        render_js: "true",
+        block_resources: "false",
+        wait: "2000",
+      });
+      const res = await fetch(`https://app.scrapingbee.com/api/v1/?${params}`, {
+        signal: AbortSignal.timeout(30000),
+      });
+      const body = await res.text();
+      results.tests.scrapingBee = {
+        status: res.status,
+        htmlLength: body.length,
+        isCloudflare: body.includes("Just a moment") || body.includes("cf-browser-verification"),
+        preview: body.slice(0, 300),
+      };
+    } catch (e) {
+      results.tests.scrapingBee = { error: String(e) };
+    }
+  }
+
+  // Test Jina (free, no key needed)
+  try {
+    const headers: Record<string, string> = {
+      Accept: "text/plain",
+      "X-Return-Format": "markdown",
+    };
+    if (jinaKey) headers["Authorization"] = `Bearer ${jinaKey}`;
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      headers,
+      signal: AbortSignal.timeout(20000),
+    });
+    const body = await res.text();
+    results.tests.jina = {
+      status: res.status,
+      contentLength: body.length,
+      isBlocked: body.includes("Just a moment") || body.includes("Access denied"),
+      preview: body.slice(0, 300),
+    };
+  } catch (e) {
+    results.tests.jina = { error: String(e) };
+  }
+
+  return NextResponse.json(results, { status: 200 });
+}
