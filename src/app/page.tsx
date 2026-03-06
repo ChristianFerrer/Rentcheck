@@ -1,12 +1,12 @@
 import Link from "next/link";
 import UrlInputForm from "@/components/analysis/UrlInputForm";
+import AnalysisForm from "@/components/analysis/AnalysisForm";
 
 export default function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-brand-50 via-white to-blue-50 pointer-events-none" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-brand-100 rounded-full blur-3xl opacity-30 -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
@@ -24,40 +24,18 @@ export default function HomePage() {
               <span className="text-brand-600">o es una oportunidad?</span>
             </h1>
 
-            <p className="text-xl text-gray-500 mb-12 max-w-xl mx-auto leading-relaxed">
-              Analiza cualquier anuncio de alquiler y descubre si el precio está
-              inflado o por debajo del mercado.
+            <p className="text-xl text-gray-500 mb-10 max-w-xl mx-auto leading-relaxed">
+              Analiza cualquier piso de Idealista o Fotocasa con un clic y
+              descubre si el precio es justo.
             </p>
 
-            {/* Main input */}
+            {/* UrlInputForm: shows bookmarklet CTA by default, loading+form when arriving from bookmarklet */}
             <UrlInputForm />
-
-            {/* Social proof */}
-            <div className="flex items-center justify-center gap-6 mt-10 text-sm text-gray-400">
-              <div className="flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Sin registro
-              </div>
-              <div className="flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Gratis
-              </div>
-              <div className="flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Resultados en segundos
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
+      {/* How it works — bookmarklet flow */}
       <section className="py-20 bg-white">
         <div className="container-app">
           <div className="text-center mb-14">
@@ -65,28 +43,31 @@ export default function HomePage() {
               Cómo funciona
             </h2>
             <p className="text-gray-500 text-lg max-w-md mx-auto">
-              En tres pasos sabes si ese piso vale lo que piden por él
+              Un clic desde Idealista o Fotocasa — y sabes si ese piso vale lo
+              que piden
             </p>
           </div>
+
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
                 step: "01",
-                icon: "🔗",
-                title: "Pega el link o introduce datos",
-                desc: "Copia la URL del anuncio de Idealista, Fotocasa o Habitaclia, o rellena el formulario manual.",
+                icon: "🔖",
+                title: "Instala el bookmarklet",
+                desc: "Arrastra el botón a la barra de favoritos de tu navegador. Solo se hace una vez y tarda menos de un minuto.",
+                link: { label: "Instalar ahora →", href: "/bookmarklet" },
               },
               {
                 step: "02",
-                icon: "🧮",
-                title: "Analizamos el mercado",
-                desc: "Comparamos el precio con el €/m² de referencia de la zona, ajustado por ascensor, terraza, estado y planta.",
+                icon: "🏠",
+                title: "Abre un piso en Idealista",
+                desc: "Navega por Idealista o Fotocasa como siempre. Cuando veas un piso que te interese, ábrelo.",
               },
               {
                 step: "03",
                 icon: "📊",
-                title: "Resultado instantáneo",
-                desc: "Recibes el veredicto: Buen precio, Precio medio o Elevado — con datos comparables y texto de negociación.",
+                title: "Haz clic y obtén el veredicto",
+                desc: "Pulsa el botón del favorito. RentCheck se abre automáticamente con los datos pre-rellenados y el análisis completo.",
               },
             ].map((item) => (
               <div key={item.step} className="card p-8 relative">
@@ -98,9 +79,36 @@ export default function HomePage() {
                   {item.title}
                 </h3>
                 <p className="text-gray-500 leading-relaxed">{item.desc}</p>
+                {item.link && (
+                  <Link
+                    href={item.link.href}
+                    className="mt-4 inline-block text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+                  >
+                    {item.link.label}
+                  </Link>
+                )}
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Manual entry fallback */}
+      <section id="analizar" className="py-20 bg-gray-50 scroll-mt-16">
+        <div className="container-app">
+          <div className="max-w-2xl mx-auto text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-xs font-medium mb-4">
+              Sin bookmarklet
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+              Introduce los datos manualmente
+            </h2>
+            <p className="text-gray-500">
+              Rellena el formulario con los datos del anuncio y obtén el mismo
+              análisis completo.
+            </p>
+          </div>
+          <AnalysisForm />
         </div>
       </section>
 
@@ -112,8 +120,8 @@ export default function HomePage() {
             Radar de oportunidades
           </h2>
           <p className="text-brand-200 text-lg mb-8 max-w-md mx-auto">
-            Descubre qué zonas de Barcelona tienen más pisos con buen precio en
-            este momento.
+            Descubre qué zonas de Barcelona tienen más pisos con buen precio
+            ahora mismo.
           </p>
           <Link href="/radar" className="btn-secondary text-brand-700">
             Ver mapa →
