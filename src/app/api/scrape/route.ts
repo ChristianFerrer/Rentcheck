@@ -134,6 +134,71 @@ function detectZoneFromUrl(url: string): string | undefined {
   return undefined;
 }
 
+// Text-based zone detection — searches canonical names and Idealista text patterns in page text.
+// More reliable than URL slugs for listing-detail URLs (e.g. idealista.com/inmueble/12345/).
+const ZONE_TEXT_ALIASES: Array<[RegExp, string]> = [
+  // Sarrià-Sant Gervasi
+  [/sant\s+gervasi[\s\-]+galvany/i, "Sant Gervasi - Galvany"],
+  [/sant\s+gervasi[\s\-]+(?:la\s+)?bonanova/i, "Sant Gervasi - la Bonanova"],
+  [/sarri[àa][\s\-]sant\s+gervasi/i, "Sant Gervasi - Galvany"],
+  [/les\s+tres\s+torres/i, "Les Tres Torres"],
+  [/putxet\s+i\s+el\s+farr[oó]/i, "El Putxet i el Farró"],
+  // Eixample
+  [/dreta\s+de\s+l[''']eixample/i, "La Dreta de l'Eixample"],
+  [/antiga\s+esquerra\s+de\s+l[''']eixample/i, "L'Antiga Esquerra de l'Eixample"],
+  [/nova\s+esquerra\s+de\s+l[''']eixample/i, "La Nova Esquerra de l'Eixample"],
+  [/sagrada\s+fam[íi]lia/i, "La Sagrada Família"],
+  [/fort\s+pienc/i, "El Fort Pienc"],
+  // Gràcia
+  [/vila\s+de\s+gr[àa]cia/i, "Vila de Gràcia"],
+  [/camp\s+d[''']en\s+grassot/i, "El Camp d'en Grassot i Gràcia Nova"],
+  [/vallcarca/i, "Vallcarca i els Penitents"],
+  // Sants-Montjuïc
+  [/poble\s+sec/i, "El Poble Sec"],
+  [/sants[\s\-]badal/i, "Sants - Badal"],
+  [/font\s+de\s+la\s+guatlla/i, "La Font de la Guatlla"],
+  [/marina\s+de\s+port/i, "La Marina de Port"],
+  // Les Corts
+  [/maternitat\s+i\s+sant\s+ramon/i, "La Maternitat i Sant Ramon"],
+  // Horta-Guinardó
+  [/baix\s+guinar[dó]/i, "El Baix Guinardó"],
+  [/horta[\s\-]guinar[dó]/i, "Horta"],
+  [/vall\s+d[''']hebron/i, "La Vall d'Hebron"],
+  // Sant Martí
+  [/poblenou/i, "El Poblenou"],
+  [/vila\s+ol[íi]mpica/i, "La Vila Olímpica del Poblenou"],
+  [/diagonal\s+mar/i, "Diagonal Mar i el Front Marítim del Poblenou"],
+  [/camp\s+de\s+l[''']arpa/i, "El Camp de l'Arpa del Clot"],
+  [/parc\s+i\s+la\s+llacuna/i, "El Parc i la Llacuna del Poblenou"],
+  [/besos\s+i\s+el\s+maresme/i, "El Besòs i el Maresme"],
+  [/proven[cç]als\s+del\s+poblenou/i, "Provençals del Poblenou"],
+  [/sant\s+mart[íi]\s+de\s+proven[cç]als/i, "Sant Martí de Provençals"],
+  [/verneda\s+i\s+la\s+pau/i, "La Verneda i la Pau"],
+  // Ciutat Vella
+  [/barri\s+g[òo]tic/i, "El Barri Gòtic"],
+  [/barceloneta/i, "La Barceloneta"],
+  [/sant\s+pere.*santa\s+caterina/i, "Sant Pere, Santa Caterina i la Ribera"],
+  // Nou Barris
+  [/vilapicina/i, "Vilapicina i la Torre Llobeta"],
+  [/trin[ií]tat\s+nova/i, "La Trinitat Nova"],
+  [/trin[ií]tat\s+vella/i, "La Trinitat Vella"],
+  [/ciutat\s+meridiana/i, "Ciutat Meridiana"],
+];
+
+function detectZoneFromText(text: string): string | undefined {
+  // 1. Check regex aliases (catches "Sant Gervasi - Galvany", "Sarrià-Sant Gervasi", etc.)
+  for (const [pattern, zone] of ZONE_TEXT_ALIASES) {
+    if (pattern.test(text)) return zone;
+  }
+  // 2. Check canonical zone names verbatim (longest first to prefer specific matches)
+  const sorted = [...VALID_ZONES].sort((a, b) => b.length - a.length);
+  const lower = text.toLowerCase();
+  for (const zone of sorted) {
+    if (lower.includes(zone.toLowerCase())) return zone;
+  }
+  return undefined;
+}
+
 // ─── Fetch strategies ───────────────────────────────────────────────────────
 
 // ─── ScrapingBee (primary: handles Cloudflare with real Chrome) ─────────────
@@ -422,18 +487,27 @@ const VALID_ZONES = [
 ];
 
 const SYSTEM_PROMPT = `You are a data extraction assistant for a Spanish rental price tool.
-Given text from a property listing page, extract the fields below as a JSON object.
+Given text from a property listing page (typically from Idealista, Fotocasa or similar Spanish portals), extract the fields below as a JSON object.
 Only include fields you are confident about. Omit uncertain ones.
 
+IMPORTANT — Idealista format:
+- The summary line looks like: "[sqm] m²  [bedrooms] hab.  Planta [floor]ª [exterior/interior] [con ascensor]"
+  Example: "102 m²  4 hab.  Planta 4ª exterior con ascensor"
+  → sqm=102, bedrooms=4, floor=4, has_elevator=true
+- "hab." is SHORT FOR "habitaciones" = BEDROOMS. Do NOT confuse with bathrooms.
+- Bathrooms are listed SEPARATELY as "[n] baños" or "[n] cuartos de baño".
+- The zone/neighborhood appears in the breadcrumb or title: "Alquiler de piso en [ZONE]", "Viviendas en [ZONE]", or the location line "[ZONE], Barcelona".
+- Price format: "1.811 €/mes" — the dot is a thousands separator, so this is 1811 euros.
+
 Fields:
-- price_monthly: monthly rent in euros (number, no currency symbol)
+- price_monthly: monthly rent in euros (number, no currency symbol; remove thousands dots)
 - sqm: surface area in m² (number, 20–600)
-- bedrooms: number of bedrooms (integer 1–5)
-- bathrooms: number of bathrooms (integer 1–3)
+- bedrooms: number of bedrooms from "hab." (integer 1–5)
+- bathrooms: number of bathrooms from "baños" (integer 1–3)
 - floor: floor number (integer: 0 = ground/bajo, 1–10)
-- has_elevator: building has elevator (boolean)
-- has_terrace: apartment has terrace or balcony (boolean)
-- furnished: apartment is furnished (boolean)
+- has_elevator: building has elevator — true if text says "ascensor" (boolean)
+- has_terrace: apartment has terrace or balcony — true if "terraza" or "balcón" (boolean)
+- furnished: apartment is furnished — true if "amueblado/a" (boolean)
 - zone_name: Barcelona neighborhood — MUST be exactly one of: ${VALID_ZONES.join(", ")}
 
 Return ONLY a valid JSON object, no markdown, no explanation.`;
@@ -508,11 +582,15 @@ function parseWithRegex(text: string, url: string): ScrapedListing {
     if (v >= 20 && v <= 600) { result.sqm = v; break; }
   }
 
+  // Idealista summary line: "102 m²  4 hab.  Planta 4ª" — capture the digit before "hab."
+  // Use a specific pattern to avoid matching "2 baños" context
+  const idealistaLineMatch = text.match(/\d+\s*m[²2]\s*[\t\s·•]*(\d+)\s*hab/i);
   const bedMatch =
+    idealistaLineMatch ||
     text.match(/(\d+)\s*habitacion(?:es)?/i) ||
-    text.match(/(\d+)\s*hab\.?\b/i) ||
+    text.match(/\b([1-9])\s*hab\.?\b/i) ||   // single digit only (1-9) — avoids e.g. "102 m²" false match
     text.match(/(\d+)\s*dormitorio/i);
-  if (bedMatch) result.bedrooms = Math.min(parseInt(bedMatch[1], 10), 5);
+  if (bedMatch) result.bedrooms = Math.min(parseInt(idealistaLineMatch ? bedMatch[1] : bedMatch[1], 10), 5);
 
   const bathMatch = text.match(/(\d+)\s*ba[ñn]os?/i);
   if (bathMatch) result.bathrooms = Math.min(parseInt(bathMatch[1], 10), 3);
@@ -551,6 +629,13 @@ async function extractFromText(
     listing = listing
       ? { ...regexResult, ...listing } // merge: AI wins on overlap
       : regexResult;
+  }
+
+  // Zone fallback: text-based detection is more reliable than AI for listing-detail URLs
+  // (e.g. idealista.com/inmueble/12345/ has no slug) — apply if zone is still missing.
+  if (!listing?.zone_name) {
+    const textZone = detectZoneFromText(pageText) ?? detectZoneFromUrl(urlForRegexFallback);
+    if (textZone) listing = { ...(listing ?? { city: "barcelona" }), zone_name: textZone };
   }
 
   return listing;

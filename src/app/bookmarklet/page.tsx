@@ -11,7 +11,7 @@ export default function BookmarkletPage() {
   useEffect(() => {
     const origin = window.location.origin;
     // Minified bookmarklet: grabs visible text + URL from the current page and opens Rentcheck
-    const js = `javascript:(function(){var t=document.body.innerText.slice(0,5000);var u=location.href;var w=window.open('${origin}/?bm=1&url='+encodeURIComponent(u)+'&text='+encodeURIComponent(t),'_blank');if(!w)alert('Permite ventanas emergentes para rentcheck');})();`;
+    const js = `javascript:(function(){var t=document.body.innerText.slice(0,8000);var u=location.href;var w=window.open('${origin}/?bm=1&url='+encodeURIComponent(u)+'&text='+encodeURIComponent(t),'_blank');if(!w)alert('Permite ventanas emergentes para rentcheck');})();`;
     setBookmarkletHref(js);
   }, []);
 
