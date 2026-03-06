@@ -105,39 +105,54 @@ export default function UrlInputForm() {
   }
 
   // Default CTA state (normal homepage visit)
+  // On mobile: bookmarklets don't work — show manual entry as primary
+  // On desktop: bookmarklet is the primary flow
   return (
     <div className="flex flex-col items-center gap-6 mt-4">
-      {/* Primary CTA */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-xl">
-        <Link href="/bookmarklet" className="btn-primary text-base px-8 py-3.5 w-full sm:w-auto">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-          </svg>
-          Instalar bookmarklet — gratis
-        </Link>
-        <a
-          href="#analizar"
-          className="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors whitespace-nowrap"
-        >
-          O introduce los datos manualmente →
+
+      {/* ── MOBILE: manual entry as primary ── */}
+      <div className="flex flex-col items-center gap-3 w-full max-w-sm md:hidden">
+        <a href="#analizar" className="btn-primary text-base px-8 py-3.5 w-full text-center">
+          Introducir datos del piso →
         </a>
+        <p className="text-xs text-gray-400 text-center">
+          ¿Usas el ordenador?{" "}
+          <Link href="/bookmarklet" className="underline underline-offset-2 hover:text-gray-600">
+            Instala el bookmarklet
+          </Link>{" "}
+          para analizar con un clic desde Idealista.
+        </p>
       </div>
 
-      {/* Bookmarklet explainer pill */}
-      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 shadow-sm text-sm text-gray-500">
-        <svg className="w-4 h-4 text-brand-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        Un clic en Idealista o Fotocasa — y RentCheck analiza el precio al instante
+      {/* ── DESKTOP: bookmarklet as primary ── */}
+      <div className="hidden md:flex flex-col items-center gap-4 w-full max-w-xl">
+        <div className="flex flex-row items-center justify-center gap-4">
+          <Link href="/bookmarklet" className="btn-primary text-base px-8 py-3.5">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            Instalar bookmarklet — gratis
+          </Link>
+          <a
+            href="#analizar"
+            className="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors whitespace-nowrap"
+          >
+            O introduce los datos manualmente →
+          </a>
+        </div>
+
+        {/* Bookmarklet explainer pill */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 shadow-sm text-sm text-gray-500">
+          <svg className="w-4 h-4 text-brand-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Un clic en Idealista o Fotocasa — y RentCheck analiza el precio al instante
+        </div>
       </div>
 
-      {/* Trust badges */}
+      {/* Trust badges — both breakpoints */}
       <div className="flex items-center justify-center gap-6 flex-wrap text-sm text-gray-400">
-        {[
-          "Gratis",
-          "Resultados en segundos",
-          "Guarda tu historial",
-        ].map((label) => (
+        {["Gratis", "Resultados en segundos", "Guarda tu historial"].map((label) => (
           <div key={label} className="flex items-center gap-1.5">
             <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />

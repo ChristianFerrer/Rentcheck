@@ -35,20 +35,56 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How it works — bookmarklet flow */}
+      {/* How it works */}
       <section className="py-20 bg-white">
         <div className="container-app">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               Cómo funciona
             </h2>
-            <p className="text-gray-500 text-lg max-w-md mx-auto">
-              Un clic desde Idealista o Fotocasa — y sabes si ese piso vale lo
-              que piden
-            </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          {/* Mobile steps: formulario manual */}
+          <div className="grid grid-cols-1 gap-6 md:hidden">
+            {[
+              {
+                step: "01",
+                icon: "📋",
+                title: "Rellena los datos del piso",
+                desc: "Introduce el barrio, precio, metros y características del anuncio en el formulario de abajo.",
+                link: { label: "Ir al formulario →", href: "#analizar" },
+              },
+              {
+                step: "02",
+                icon: "⚡",
+                title: "RentCheck analiza el precio",
+                desc: "Comparamos el precio con los datos oficiales de la Generalitat de Catalunya y pisos similares.",
+              },
+              {
+                step: "03",
+                icon: "📊",
+                title: "Veredicto instantáneo",
+                desc: "Recibes: Buen precio, Precio medio o Elevado — con el porcentaje exacto sobre o bajo el mercado.",
+              },
+            ].map((item) => (
+              <div key={item.step} className="card p-6 flex gap-5 items-start">
+                <div className="text-3xl flex-shrink-0">{item.icon}</div>
+                <div>
+                  <div className="text-xs font-bold text-brand-400 tracking-widest mb-1">{item.step}</div>
+                  <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
+                  {item.link && (
+                    <a href={item.link.href} className="mt-2 inline-block text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors">
+                      {item.link.label}
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop steps: bookmarklet flow */}
+          <div className="hidden md:grid md:grid-cols-3 gap-8">
             {[
               {
                 step: "01",
@@ -97,15 +133,11 @@ export default function HomePage() {
       <section id="analizar" className="py-20 bg-gray-50 scroll-mt-16">
         <div className="container-app">
           <div className="max-w-2xl mx-auto text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-xs font-medium mb-4">
-              Sin bookmarklet
-            </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-3">
-              Introduce los datos manualmente
+              Introduce los datos del piso
             </h2>
             <p className="text-gray-500">
-              Rellena el formulario con los datos del anuncio y obtén el mismo
-              análisis completo.
+              Rellena el formulario con los datos del anuncio y obtén el análisis completo.
             </p>
           </div>
           <AnalysisForm />

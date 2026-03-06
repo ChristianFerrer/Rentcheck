@@ -28,11 +28,38 @@ export default function BookmarkletPage() {
         ← Volver al inicio
       </Link>
 
+      {/* Mobile warning banner */}
+      <div className="md:hidden mb-8 rounded-xl border border-orange-200 bg-orange-50 p-5">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">📱</span>
+          <div>
+            <p className="font-semibold text-orange-900 mb-1">
+              Los bookmarklets no funcionan en móvil
+            </p>
+            <p className="text-sm text-orange-800 mb-3">
+              Los navegadores de iOS y Android no permiten ejecutar bookmarklets. Para analizar un piso desde el móvil, introduce los datos manualmente.
+            </p>
+            <Link
+              href="/#analizar"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-900 underline underline-offset-2"
+            >
+              Ir al formulario manual →
+            </Link>
+          </div>
+        </div>
+      </div>
+
       <h1 className="text-3xl font-bold text-gray-900 mb-3">
         Bookmarklet de Rentcheck
       </h1>
-      <p className="text-gray-500 mb-10 text-lg">
+      <p className="text-gray-500 mb-2 text-lg">
         Analiza cualquier anuncio de Idealista con un clic, sin copiar y pegar manualmente.
+      </p>
+      <p className="inline-flex items-center gap-1.5 mb-10 text-sm text-gray-400 bg-gray-100 rounded-full px-3 py-1">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+        Solo disponible en navegadores de escritorio
       </p>
 
       {/* Why */}
