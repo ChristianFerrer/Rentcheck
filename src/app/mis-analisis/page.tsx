@@ -127,20 +127,31 @@ export default function MisAnalisisPage() {
       ) : (
         <div className="space-y-3">
           {analyses.map((a) => (
-            <Link
-              key={a.id}
-              href={`/resultado/${a.id}`}
-              className="card p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-brand-200 hover:shadow-md transition-all cursor-pointer block"
-            >
-              <div className="flex-1 min-w-0">
+            <div key={a.id} className="card p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-brand-200 hover:shadow-md transition-all">
+              <Link href={`/resultado/${a.id}`} className="flex-1 min-w-0 cursor-pointer">
                 <div className="flex items-center gap-3 mb-1 flex-wrap">
                   <span className="font-semibold text-gray-900 truncate">{a.zone_name}</span>
                   <PriceBadge label={a.label} size="sm" />
+                  {a.source_url && (
+                    <a
+                      href={a.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-800 transition-colors"
+                      title="Ver anuncio original"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      Anuncio
+                    </a>
+                  )}
                 </div>
                 <p className="text-sm text-gray-500">
                   {a.sqm}m² · {a.bedrooms} hab. · {a.bathrooms} baño{a.bathrooms > 1 ? "s" : ""} · {a.condition.replace("_", " ")}
                 </p>
-              </div>
+              </Link>
 
               <div className="flex items-center gap-6 text-right sm:flex-shrink-0">
                 <div>
@@ -167,7 +178,7 @@ export default function MisAnalisisPage() {
                   <p className="text-xs text-gray-400">{formatDate(a.created_at)}</p>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

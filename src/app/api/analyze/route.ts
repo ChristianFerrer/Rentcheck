@@ -94,15 +94,26 @@ export async function POST(request: NextRequest) {
         userId = user?.id ?? null;
       }
 
-      const { data, error } = await supabase
-        .from("listings_analyses")
-        .insert({
-          ...result,
-          user_id: userId,
-        })
-        .select("id")
-        .single();
+      const record = { ...result, user_id: userId };
 
+      // Upsert by (user_id, source_url) when both are present — prevents duplicate
+      // entries for the same listing. Falls back to plain INSERT otherwise.
+      let query;
+      if (userId && result.source_url) {
+        query = supabase
+          .from("listings_analyses")
+          .upsert(record, { onConflict: "user_id,source_url", ignoreDuplicates: false })
+          .select("id")
+          .single();
+      } else {
+        query = supabase
+          .from("listings_analyses")
+          .insert(record)
+          .select("id")
+          .single();
+      }
+
+      const { data, error } = await query;
       if (!error && data) {
         savedId = data.id;
       }

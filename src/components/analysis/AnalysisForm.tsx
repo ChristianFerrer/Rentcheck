@@ -12,7 +12,7 @@ import type { ScrapedListing } from "@/lib/scraper/urlParser";
 const PENDING_FORM_KEY = "rentcheck_pending_form";
 
 interface Props {
-  sourceUrl?: string;
+  sourceUrl?: string;       // set by bookmarklet flow — shown read-only
   prefillExample?: boolean;
   scrapedData?: ScrapedListing;
 }
@@ -38,6 +38,8 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
   const [error, setError] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const pendingSubmitRef = useRef(false);
+  // Manual URL field — only used when sourceUrl prop is not provided (manual flow)
+  const [manualUrl, setManualUrl] = useState("");
 
   const supabase = createClient();
 
@@ -63,6 +65,7 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
     try {
       const saved = JSON.parse(pending);
       sessionStorage.removeItem(PENDING_FORM_KEY);
+      if (saved.__manualUrl) { setManualUrl(saved.__manualUrl); delete saved.__manualUrl; }
       setForm((prev) => ({ ...prev, ...saved }));
     } catch {
       sessionStorage.removeItem(PENDING_FORM_KEY);
@@ -130,7 +133,7 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
         method: "POST",
         headers,
         body: JSON.stringify({
-          source_url: sourceUrl || undefined,
+          source_url: sourceUrl || manualUrl.trim() || undefined,
           city: form.city,
           zone_name: form.zone_name,
           price_monthly: Number(form.price_monthly),
@@ -193,7 +196,7 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
 
   function handleGoogleRedirect() {
     // Save current form to sessionStorage before OAuth redirect
-    sessionStorage.setItem(PENDING_FORM_KEY, JSON.stringify(form));
+    sessionStorage.setItem(PENDING_FORM_KEY, JSON.stringify({ ...form, __manualUrl: manualUrl }));
   }
 
   return (
@@ -229,6 +232,32 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
+
+        {/* Optional URL — only in manual flow (bookmarklet already shows the pill above) */}
+        {!sourceUrl && (
+          <div>
+            <label className="label-base">
+              Link del anuncio{" "}
+              <span className="text-gray-400 font-normal">(opcional)</span>
+            </label>
+            <div className="relative">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <input
+                type="url"
+                placeholder="https://www.idealista.com/inmueble/..."
+                value={manualUrl}
+                onChange={(e) => setManualUrl(e.target.value)}
+                className="input-base pl-10 text-sm"
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              Guárdalo para volver al anuncio desde tu historial y evitar duplicados.
+            </p>
+          </div>
+        )}
+
         {/* Location row */}
         <div className="grid grid-cols-2 gap-4">
           <div>

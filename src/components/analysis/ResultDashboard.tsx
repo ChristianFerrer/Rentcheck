@@ -59,8 +59,8 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
 
   return (
     <div className="container-app py-10 animate-fade-in">
-      {/* Back link + PDF button */}
-      <div className="mb-8 flex items-center justify-between print-hide">
+      {/* Back link + actions */}
+      <div className="mb-8 flex items-center justify-between gap-4 flex-wrap print-hide">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
@@ -70,15 +70,30 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
           </svg>
           Nuevo análisis
         </Link>
-        <button
-          onClick={handlePrint}
-          className="btn-secondary text-sm flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Descargar PDF
-        </button>
+        <div className="flex items-center gap-3">
+          {result.source_url && (
+            <a
+              href={result.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary text-sm flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Ver anuncio
+            </a>
+          )}
+          <button
+            onClick={handlePrint}
+            className="btn-secondary text-sm flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Descargar PDF
+          </button>
+        </div>
       </div>
 
       {/* Hero result card */}
