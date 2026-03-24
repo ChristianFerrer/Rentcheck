@@ -9,8 +9,6 @@ import { BARRIOS_BY_DISTRICT, DISTRICT_ORDER, BARCELONA_BARRIOS } from "@/lib/al
 import type { Condition } from "@/types";
 import type { ScrapedListing } from "@/lib/scraper/urlParser";
 
-const PENDING_FORM_KEY = "rentcheck_pending_form";
-
 interface Props {
   sourceUrl?: string;       // set by bookmarklet flow — shown read-only
   prefillExample?: boolean;
@@ -57,20 +55,6 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
     condition: "bueno" as Condition,
     bills_included: false,
   });
-
-  // Restore form data saved before Google OAuth redirect
-  useEffect(() => {
-    const pending = sessionStorage.getItem(PENDING_FORM_KEY);
-    if (!pending) return;
-    try {
-      const saved = JSON.parse(pending);
-      sessionStorage.removeItem(PENDING_FORM_KEY);
-      if (saved.__manualUrl) { setManualUrl(saved.__manualUrl); delete saved.__manualUrl; }
-      setForm((prev) => ({ ...prev, ...saved }));
-    } catch {
-      sessionStorage.removeItem(PENDING_FORM_KEY);
-    }
-  }, []);
 
   useEffect(() => {
     if (prefillExample) fillExample();
@@ -194,18 +178,12 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
     submitAnalysis(); // no token → result won't be saved
   }
 
-  function handleGoogleRedirect() {
-    // Save current form to sessionStorage before OAuth redirect
-    sessionStorage.setItem(PENDING_FORM_KEY, JSON.stringify({ ...form, __manualUrl: manualUrl }));
-  }
-
   return (
     <>
     {showAuthModal && (
       <AuthModal
         onContinueAsGuest={handleContinueAsGuest}
         onClose={() => setShowAuthModal(false)}
-        onGoogleRedirect={handleGoogleRedirect}
       />
     )}
     <div className="max-w-2xl mx-auto card p-8 text-left animate-slide-up">
