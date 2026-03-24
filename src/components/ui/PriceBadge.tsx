@@ -7,32 +7,32 @@ interface Props {
 
 const config: Record<
   PriceLabel,
-  { emoji: string; text: string; className: string }
+  { dotClass: string; text: string; className: string }
 > = {
   BAJO: {
-    emoji: "🟢",
+    dotClass: "bg-green-500",
     text: "Buen precio",
     className: "badge-low",
   },
   MEDIO: {
-    emoji: "🟡",
+    dotClass: "bg-yellow-500",
     text: "Precio medio",
     className: "badge-medium",
   },
   ELEVADO: {
-    emoji: "🔴",
+    dotClass: "bg-red-500",
     text: "Precio elevado",
     className: "badge-high",
   },
 };
 
 export default function PriceBadge({ label, size = "sm" }: Props) {
-  const { emoji, text, className } = config[label];
+  const { dotClass, text, className } = config[label];
   return (
     <span
       className={`${className} ${size === "lg" ? "text-lg px-6 py-3" : "text-sm"}`}
     >
-      <span>{emoji}</span>
+      <span className={`inline-block rounded-full flex-shrink-0 ${dotClass} ${size === "lg" ? "w-3 h-3" : "w-2 h-2"}`} />
       <span>{text}</span>
     </span>
   );

@@ -213,13 +213,6 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
         <h2 className="text-xl font-semibold text-gray-900">
           Datos del anuncio
         </h2>
-        <button
-          onClick={fillExample}
-          type="button"
-          className="text-sm text-brand-600 hover:text-brand-700 font-medium transition-colors"
-        >
-          Cargar ejemplo
-        </button>
       </div>
 
       {sourceUrl && (
@@ -385,9 +378,33 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
           <label className="label-base">Estado del piso</label>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { value: "reformado", label: "Reformado", icon: "✨" },
-              { value: "bueno", label: "Buen estado", icon: "👍" },
-              { value: "a_reformar", label: "A reformar", icon: "🔧" },
+              {
+                value: "reformado",
+                label: "Reformado",
+                icon: (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
+                  </svg>
+                ),
+              },
+              {
+                value: "bueno",
+                label: "Buen estado",
+                icon: (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75a.75.75 0 0 1 .75-.75 2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.5c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 9.953 4.167 9.5 5 9.5h1.053c.472 0 .745.556.5.96a8.958 8.958 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z" />
+                  </svg>
+                ),
+              },
+              {
+                value: "a_reformar",
+                label: "A reformar",
+                icon: (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
+                  </svg>
+                ),
+              },
             ].map((opt) => (
               <button
                 key={opt.value}
@@ -401,7 +418,9 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
                     : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                 }`}
               >
-                <div className="text-xl mb-1">{opt.icon}</div>
+                <div className={`flex justify-center mb-1 ${form.condition === opt.value ? "text-brand-600" : "text-gray-400"}`}>
+                  {opt.icon}
+                </div>
                 {opt.label}
               </button>
             ))}
@@ -411,14 +430,46 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
         {/* Checkboxes */}
         <div className="grid grid-cols-2 gap-3">
           {[
-            { key: "has_elevator", label: "Ascensor", icon: "🛗" },
-            { key: "has_terrace", label: "Terraza", icon: "🌿" },
-            { key: "furnished", label: "Amueblado", icon: "🛋️" },
-            { key: "bills_included", label: "Gastos incluidos", icon: "💡" },
+            {
+              key: "has_elevator",
+              label: "Ascensor",
+              icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+                </svg>
+              ),
+            },
+            {
+              key: "has_terrace",
+              label: "Terraza",
+              icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+                </svg>
+              ),
+            },
+            {
+              key: "furnished",
+              label: "Amueblado",
+              icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+              ),
+            },
+            {
+              key: "bills_included",
+              label: "Gastos incluidos",
+              icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+                </svg>
+              ),
+            },
           ].map((item) => (
             <label
               key={item.key}
-              className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+              className={`relative flex items-center gap-2 p-3 pr-8 rounded-xl border-2 cursor-pointer transition-all ${
                 form[item.key as keyof typeof form]
                   ? "border-brand-500 bg-brand-50"
                   : "border-gray-200 hover:border-gray-300 bg-white"
@@ -432,9 +483,17 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
                   setForm({ ...form, [item.key]: e.target.checked })
                 }
               />
-              <span className="text-xl">{item.icon}</span>
               <span
-                className={`text-sm font-medium ${
+                className={`flex-shrink-0 ${
+                  form[item.key as keyof typeof form]
+                    ? "text-brand-600"
+                    : "text-gray-400"
+                }`}
+              >
+                {item.icon}
+              </span>
+              <span
+                className={`text-sm font-medium leading-tight ${
                   form[item.key as keyof typeof form]
                     ? "text-brand-700"
                     : "text-gray-600"
@@ -442,28 +501,26 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
               >
                 {item.label}
               </span>
-              <div className="ml-auto">
-                <div
-                  className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all ${
-                    form[item.key as keyof typeof form]
-                      ? "border-brand-500 bg-brand-500"
-                      : "border-gray-300"
-                  }`}
-                >
-                  {form[item.key as keyof typeof form] && (
-                    <svg
-                      className="w-3 h-3 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </div>
+              <div
+                className={`absolute top-2 right-2 w-4 h-4 rounded flex items-center justify-center border-2 transition-all flex-shrink-0 ${
+                  form[item.key as keyof typeof form]
+                    ? "border-brand-500 bg-brand-500"
+                    : "border-gray-300"
+                }`}
+              >
+                {form[item.key as keyof typeof form] && (
+                  <svg
+                    className="w-2.5 h-2.5 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
               </div>
             </label>
           ))}
