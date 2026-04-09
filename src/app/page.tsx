@@ -1,8 +1,24 @@
 import Link from "next/link";
 import UrlInputForm from "@/components/analysis/UrlInputForm";
 import AnalysisForm from "@/components/analysis/AnalysisForm";
+import { createAdminClient } from "@/lib/supabase/server";
 
-export default function HomePage() {
+export const revalidate = 300;
+
+async function getAnalysesCount(): Promise<number> {
+  try {
+    const supabase = createAdminClient();
+    const { count } = await supabase
+      .from("listings_analyses")
+      .select("*", { count: "exact", head: true });
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export default async function HomePage() {
+  const analysesCount = await getAnalysesCount();
   return (
     <div className="flex flex-col">
       {/* Hero */}
@@ -17,6 +33,20 @@ export default function HomePage() {
               <span className="w-1.5 h-1.5 bg-brand-600 rounded-full animate-pulse" />
               Análisis en tiempo real · Barcelona
             </div>
+
+            {/* Social proof counter */}
+            {analysesCount > 0 && (
+              <div className="flex justify-center mb-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 shadow-sm text-sm text-gray-600">
+                  <svg className="w-4 h-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <span>
+                    <strong className="text-gray-900">{analysesCount.toLocaleString("es-ES")}</strong> pisos analizados en Barcelona
+                  </span>
+                </div>
+              </div>
+            )}
 
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 leading-tight mb-6">
               ¿Este piso está caro
