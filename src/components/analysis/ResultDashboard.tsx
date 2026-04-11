@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import PriceBadge from "@/components/ui/PriceBadge";
 import { generateNegotiationText } from "@/lib/algorithm/estimator";
 import { checkIncasol, getDistrictForBarrio, INCASOL_CHECKER_URL, SINDICAT_URL } from "@/lib/incasol";
+import { createClient } from "@/lib/supabase/client";
+import AuthModal from "@/components/auth/AuthModal";
+import { createPortal } from "react-dom";
 import type { AnalysisResult, ComparableListing, MarketContext } from "@/types";
 
 interface Props {
@@ -22,6 +25,30 @@ function formatPct(n: number) {
   return `${sign}${n.toFixed(1)}%`;
 }
 
+function CollapsibleSection({ title, icon, children }: { title: string; icon: React.ReactNode; children?: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="card overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full p-5 flex items-center justify-between gap-3 text-left hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-2 font-semibold text-gray-900">
+          {icon}
+          {title}
+        </div>
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && <div className="px-5 pb-5">{children}</div>}
+    </div>
+  );
+}
+
 function ActionCard({ icon, title, desc, href }: { icon: string; title: string; desc: string; href?: string }) {
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
@@ -30,12 +57,7 @@ function ActionCard({ icon, title, desc, href }: { icon: string; title: string; 
         <p className="text-sm font-semibold text-gray-900 mb-0.5">{title}</p>
         <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
         {href && (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 inline-block text-xs font-semibold text-brand-600 hover:text-brand-700"
-          >
+          <a href={href} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-xs font-semibold text-brand-600 hover:text-brand-700">
             Ver más →
           </a>
         )}
@@ -51,9 +73,30 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
   const [copied, setCopied] = useState(false);
   const [copiedNegotiation, setCopiedNegotiation] = useState(false);
   const [salary, setSalary] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  const supabase = createClient();
   const district = getDistrictForBarrio(result.zone_name);
   const incasol = checkIncasol(district, result.sqm, result.price_monthly);
+
+  useEffect(() => {
+    setMounted(true);
+    supabase.auth.getSession().then((res) => {
+      setIsLoggedIn(!!res.data.session);
+    });
+  }, []);
+
+  const salaryNum = Number(salary);
+  const rentPct = salaryNum > 0 ? (result.price_monthly / salaryNum) * 100 : null;
+  const affordablePrice = salaryNum > 0 ? Math.round(salaryNum * 0.30) : null;
+
+  const labelColors: Record<string, string> = {
+    BAJO: "from-green-500 to-emerald-600",
+    MEDIO: "from-yellow-500 to-amber-500",
+    ELEVADO: "from-red-500 to-rose-600",
+  };
 
   function handleCopyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -69,67 +112,43 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
     });
   }
 
-  function handlePrint() {
-    window.print();
+  function getWhatsAppMessage() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    if (result.label === "BAJO") {
+      return `He encontrado un piso con buen precio en ${result.zone_name}: ${result.price_monthly.toLocaleString("es-ES")}€/mes, ${result.sqm}m² (${formatPct(result.difference_pct)} del mercado). Ver análisis: ${url}`;
+    }
+    if (result.label === "ELEVADO" && incasol.isAboveLimit) {
+      return `Cuidado con este piso en ${result.zone_name}: cobra ${result.price_monthly.toLocaleString("es-ES")}€/mes pero el máximo legal estimado es ${incasol.incasolMaxRent.toLocaleString("es-ES")}€/mes (~${incasol.overByMonthly.toLocaleString("es-ES")}€/mes de más). Analizado con RentCheck: ${url}`;
+    }
+    return `He analizado un piso en ${result.zone_name}: ${result.price_monthly.toLocaleString("es-ES")}€/mes, ${result.sqm}m² (${formatPct(result.difference_pct)} del mercado). Ver análisis: ${url}`;
   }
-
-  const salaryNum = Number(salary);
-  const rentPct = salaryNum > 0 ? (result.price_monthly / salaryNum) * 100 : null;
-  const affordablePrice = salaryNum > 0 ? Math.round(salaryNum * 0.30) : null;
-
-  const labelColors: Record<string, string> = {
-    BAJO: "from-green-500 to-emerald-600",
-    MEDIO: "from-yellow-500 to-amber-500",
-    ELEVADO: "from-red-500 to-rose-600",
-  };
 
   return (
     <div className="container-app py-10 animate-fade-in">
-      {/* Back link + actions */}
+      {/* Top bar */}
       <div className="mb-8 flex items-center justify-between gap-4 flex-wrap print-hide">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-        >
+        <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Nuevo análisis
         </Link>
-        <div className="flex items-center gap-3">
-          {result.source_url && (
-            <a
-              href={result.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary text-sm flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              Ver anuncio
-            </a>
-          )}
-          <button
-            onClick={handlePrint}
-            className="btn-secondary text-sm flex items-center gap-2"
-          >
+        {result.source_url && (
+          <a href={result.source_url} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
-            Descargar PDF
-          </button>
-        </div>
+            Ver anuncio
+          </a>
+        )}
       </div>
 
       {/* Hero result card */}
-      <div className={`card overflow-hidden mb-8`}>
+      <div className="card overflow-hidden mb-4">
         <div className={`bg-gradient-to-r ${labelColors[result.label]} p-8 text-white`}>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-              <p className="text-white/70 text-sm font-medium mb-2 uppercase tracking-wider">
-                Veredicto
-              </p>
+              <p className="text-white/70 text-sm font-medium mb-2 uppercase tracking-wider">Veredicto</p>
               <PriceBadge label={result.label} size="lg" />
               <p className="mt-4 text-white/90 text-lg max-w-md">
                 {result.difference_pct > 0
@@ -146,189 +165,185 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
             </div>
           </div>
         </div>
-
-        {/* Quick stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
           {[
-            {
-              label: "Precio estimado",
-              value: formatEur(result.estimated_price),
-              sub: "referencia mercado",
-            },
-            {
-              label: "Rango estimado",
-              value: `${formatEur(result.estimated_min)} – ${formatEur(result.estimated_max)}`,
-              sub: "±7%",
-            },
-            {
-              label: "€/m² anunciado",
-              value: `${eurM2Price} €/m²`,
-              sub: `ref: ${eurM2Ref} €/m²`,
-            },
-            {
-              label: "Diferencia",
-              value: formatPct(result.difference_pct),
-              sub: "vs mercado",
-              highlight: true,
-            },
+            { label: "Precio estimado", value: formatEur(result.estimated_price), sub: "referencia mercado" },
+            { label: "Rango estimado", value: `${formatEur(result.estimated_min)} – ${formatEur(result.estimated_max)}`, sub: "±7%" },
+            { label: "€/m² anunciado", value: `${eurM2Price} €/m²`, sub: `ref: ${eurM2Ref} €/m²` },
+            { label: "Diferencia", value: formatPct(result.difference_pct), sub: "vs mercado", highlight: true },
           ].map((stat) => (
             <div key={stat.label} className="p-5 text-center">
               <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
-              <p
-                className={`text-xl font-bold ${
-                  stat.highlight
-                    ? result.label === "BAJO"
-                      ? "text-green-600"
-                      : result.label === "ELEVADO"
-                      ? "text-red-600"
-                      : "text-yellow-600"
-                    : "text-gray-900"
-                }`}
-              >
-                {stat.value}
-              </p>
+              <p className={`text-xl font-bold ${
+                stat.highlight
+                  ? result.label === "BAJO" ? "text-green-600" : result.label === "ELEVADO" ? "text-red-600" : "text-yellow-600"
+                  : "text-gray-900"
+              }`}>{stat.value}</p>
               <p className="text-xs text-gray-400 mt-0.5">{stat.sub}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Factors */}
-        <div className="md:col-span-1 space-y-6">
-          <div className="card p-6">
-            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Factores analizados
-            </h2>
-            <div className="space-y-3">
-              {result.explanation.map((f, i) => (
-                <div
-                  key={i}
-                  className="flex items-start justify-between gap-3 py-2 border-b border-gray-50 last:border-0"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">
-                      {f.factor}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {f.description}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                      f.impact.startsWith("+")
-                        ? "bg-green-100 text-green-700"
-                        : f.impact.startsWith("-")
-                        ? "bg-red-100 text-red-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {f.impact}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Save CTA — anonymous users */}
+      {!isLoggedIn && result.id && (
+        <div className="mb-6 p-4 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-between gap-4 flex-wrap print-hide">
+          <p className="text-sm text-brand-800">
+            <strong>Guarda este análisis</strong> en tu historial para consultarlo más tarde.
+          </p>
+          <button onClick={() => setShowAuthModal(true)} className="btn-primary text-sm py-2 px-4 flex-shrink-0">
+            Iniciar sesión
+          </button>
+        </div>
+      )}
 
-          {/* Listing details */}
-          <div className="card p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">
-              Detalles del piso
-            </h2>
-            <dl className="space-y-2 text-sm">
-              {[
-                { label: "Zona", value: result.zone_name },
-                { label: "Superficie", value: `${result.sqm} m²` },
-                {
-                  label: "Habitaciones",
-                  value: `${result.bedrooms} hab. · ${result.bathrooms} baño${result.bathrooms > 1 ? "s" : ""}`,
-                },
-                {
-                  label: "Planta",
-                  value: result.floor === 0 ? "Bajo" : `${result.floor}ª`,
-                },
-                { label: "Estado", value: result.condition.replace("_", " ") },
-              ].map((item) => (
-                <div key={item.label} className="flex justify-between">
-                  <dt className="text-gray-500">{item.label}</dt>
-                  <dd className="font-medium text-gray-900 capitalize">
-                    {item.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+      {/* INCASÒL — Legal rent cap */}
+      <div className={`card p-6 mb-6 border-l-4 ${incasol.isAboveLimit ? "border-red-400" : "border-green-400"}`}>
+        <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+          <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          ¿Es legal este alquiler?
+        </h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Barcelona es zona tensionada desde 2022. El precio máximo está limitado por el Índex de Referència de Preus del Lloguer (IRPL) · Estimación por distrito
+        </p>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-gray-50 rounded-lg p-3 text-center">
+            <p className="text-xs text-gray-500 mb-1">Precio anunciado</p>
+            <p className="text-lg font-bold text-gray-900">{result.price_monthly.toLocaleString("es-ES")}€</p>
+            <p className="text-xs text-gray-400">/mes</p>
+          </div>
+          <div className={`rounded-lg p-3 text-center ${incasol.isAboveLimit ? "bg-red-50 border border-red-100" : "bg-green-50 border border-green-100"}`}>
+            <p className="text-xs text-gray-500 mb-1">Máx. legal estimado</p>
+            <p className={`text-lg font-bold ${incasol.isAboveLimit ? "text-red-700" : "text-green-700"}`}>
+              {incasol.incasolMaxRent.toLocaleString("es-ES")}€
+            </p>
+            <p className="text-xs text-gray-400">{incasol.incasolEurM2} €/m² IRPL</p>
+          </div>
+          <div className={`rounded-lg p-3 text-center ${incasol.isAboveLimit ? "bg-red-50 border border-red-100" : "bg-green-50 border border-green-100"}`}>
+            <p className="text-xs text-gray-500 mb-1">{incasol.isAboveLimit ? "Exceso mensual" : "Estado"}</p>
+            <p className={`text-lg font-bold ${incasol.isAboveLimit ? "text-red-700" : "text-green-700"}`}>
+              {incasol.isAboveLimit ? `+${incasol.overByMonthly.toLocaleString("es-ES")}€` : "Dentro del límite"}
+            </p>
+            {incasol.isAboveLimit && (
+              <p className="text-xs text-red-600 font-medium">{incasol.overByAnnual.toLocaleString("es-ES")}€/año</p>
+            )}
           </div>
         </div>
-
-        {/* Right column */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Comparables */}
-          <div className="card p-6">
-            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              Pisos similares en el mercado
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2 text-gray-500 font-medium">
-                      Zona
-                    </th>
-                    <th className="text-right py-2 text-gray-500 font-medium">
-                      Precio
-                    </th>
-                    <th className="text-right py-2 text-gray-500 font-medium">
-                      m²
-                    </th>
-                    <th className="text-right py-2 text-gray-500 font-medium">
-                      €/m²
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparables.map((c, i) => (
-                    <tr
-                      key={i}
-                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="py-3 text-gray-900">{c.zone}</td>
-                      <td className="py-3 text-right font-medium text-gray-900">
-                        {formatEur(c.price)}
-                      </td>
-                      <td className="py-3 text-right text-gray-600">
-                        {c.sqm}m²
-                      </td>
-                      <td className="py-3 text-right">
-                        <span
-                          className={`font-semibold ${
-                            c.eur_m2 < eurM2Ref
-                              ? "text-green-600"
-                              : c.eur_m2 > eurM2Ref * 1.1
-                              ? "text-red-600"
-                              : "text-yellow-600"
-                          }`}
-                        >
-                          {c.eur_m2}€
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="text-xs text-gray-400 mt-3">
-              * Pisos similares estimados a partir del precio oficial Generalitat Catalunya
-              {marketContext ? ` (${marketContext.districtAvgPricePerM2.toFixed(1)} €/m² en ${result.zone_name}, año ${marketContext.year})` : " de referencia de zona"}.
+        {incasol.isAboveLimit ? (
+          <div className="bg-red-50 rounded-xl p-4 mb-4">
+            <p className="text-sm text-red-800 font-medium mb-1">
+              Este alquiler podría superar el índice legal en aproximadamente {incasol.overByMonthly.toLocaleString("es-ES")}€/mes ({incasol.overByAnnual.toLocaleString("es-ES")}€/año)
+            </p>
+            <p className="text-xs text-red-700">
+              Estimación basada en el IRPL del distrito {district}. El índice exacto depende de la sección censal, superficie y año de construcción.
             </p>
           </div>
+        ) : (
+          <div className="bg-green-50 rounded-xl p-4 mb-4">
+            <p className="text-sm text-green-800 font-medium mb-1">
+              Este alquiler parece estar dentro del límite legal estimado para {district}
+            </p>
+            <p className="text-xs text-green-700">Verifica el índice exacto con la dirección del piso para confirmarlo.</p>
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <a href={INCASOL_CHECKER_URL} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Verificar índice oficial
+          </a>
+          {incasol.isAboveLimit && (
+            <>
+              <a href={SINDICAT_URL} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm">
+                Asesoría gratuita (Sindicat)
+              </a>
+              <a
+                href="https://habitatge.gencat.cat/ca/detalls/Tramit/Denuncia-per-incompliment-de-la-normativa-d-habitatge-H107Ge"
+                target="_blank" rel="noopener noreferrer"
+                className="btn-secondary text-sm"
+              >
+                Denunciar anuncio
+              </a>
+            </>
+          )}
+        </div>
+      </div>
 
-          {/* Calculadora de accesibilidad */}
+      {/* ¿Qué hago ahora? */}
+      <div className="card p-6 mb-6">
+        <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          ¿Qué hago ahora?
+        </h2>
+        <div className="space-y-3">
+          {result.label === "BAJO" && (
+            <>
+              <ActionCard icon="✅" title="Buen precio — negocia las condiciones" desc="Con este precio de salida puedes pedir mejoras: pintura, electrodomésticos, meses de carencia o una cláusula de renuncia al subarrendamiento." />
+              <ActionCard icon="📋" title="Revisa el contrato antes de firmar" desc="Asegúrate de que incluye la cédula de habitabilidad, el certificado energético y que la fianza no excede 2 mensualidades." href="https://habitatge.gencat.cat/ca/detalls/Article/Contractes-de-lloguer" />
+            </>
+          )}
+          {result.label === "MEDIO" && (
+            <>
+              <ActionCard icon="💬" title="Intenta negociar a la baja" desc={`El precio está en rango de mercado, pero siempre hay margen. Propón ${formatEur(result.estimated_min)}/mes como contraoferta razonada.`} />
+              <ActionCard icon="🔍" title="Verifica el índice IRPL" desc="Comprueba con la dirección exacta del piso si el precio supera el límite legal." href={INCASOL_CHECKER_URL} />
+            </>
+          )}
+          {result.label === "ELEVADO" && (
+            <>
+              <ActionCard
+                icon="⚖️"
+                title={incasol.isAboveLimit ? "Este alquiler podría ser ilegal" : "Precio por encima del mercado"}
+                desc={incasol.isAboveLimit
+                  ? `El máximo legal estimado es ${formatEur(incasol.incasolMaxRent)}/mes. Tienes derecho a reclamar la diferencia.`
+                  : `Este piso está un ${Math.abs(result.difference_pct)}% sobre el precio de mercado. Negocia usando el análisis como argumento.`}
+                href={INCASOL_CHECKER_URL}
+              />
+              <ActionCard icon="🏛️" title="Asesoría gratuita del Sindicat de Llogateres" desc="El Sindicat ofrece asesoría jurídica gratuita. Te ayudan a reclamar alquileres sobre el índice y a defender tus derechos." href={SINDICAT_URL} />
+              <ActionCard icon="📝" title="Reclamación formal a l'Agència de l'Habitatge" desc="Si el propietario incumple el IRPL puedes presentar una reclamación formal gratuita." href="https://habitatge.gencat.cat/ca/detalls/Tramit/Denuncia-per-incompliment-de-la-normativa-d-habitatge-H107Ge" />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Share */}
+      <div className="card p-6 mb-8 bg-brand-50 border-brand-100 print-hide">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-1">Comparte este análisis</h3>
+            <p className="text-sm text-gray-500">Comparte los resultados con quien busca piso o quiera denunciar precios abusivos.</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(getWhatsAppMessage())}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary text-sm flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              WhatsApp
+            </a>
+            <button onClick={handleCopyLink} className="btn-secondary text-sm flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              {copied ? "¡Copiado!" : "Copiar enlace"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Detail grid */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Left column */}
+        <div className="md:col-span-1 space-y-4">
+          {/* Affordability calculator */}
           <div className="card p-6">
             <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
               <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -354,63 +369,137 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
               </div>
             </div>
             {rentPct !== null && affordablePrice !== null && (
-              <div className={`mt-4 rounded-xl p-4 ${
-                rentPct <= 30 ? "bg-green-50 border border-green-200" :
-                rentPct <= 40 ? "bg-amber-50 border border-amber-200" :
-                "bg-red-50 border border-red-200"
-              }`}>
+              <div className={`mt-4 rounded-xl p-4 ${rentPct <= 30 ? "bg-green-50 border border-green-200" : rentPct <= 40 ? "bg-amber-50 border border-amber-200" : "bg-red-50 border border-red-200"}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`text-sm font-semibold ${
-                    rentPct <= 30 ? "text-green-800" :
-                    rentPct <= 40 ? "text-amber-800" :
-                    "text-red-800"
-                  }`}>
+                  <span className={`text-sm font-semibold ${rentPct <= 30 ? "text-green-800" : rentPct <= 40 ? "text-amber-800" : "text-red-800"}`}>
                     {rentPct <= 30 ? "Asequible" : rentPct <= 40 ? "Ajustado" : "Por encima de lo recomendado"}
                   </span>
-                  <span className={`text-2xl font-bold ${
-                    rentPct <= 30 ? "text-green-700" :
-                    rentPct <= 40 ? "text-amber-700" :
-                    "text-red-700"
-                  }`}>{rentPct.toFixed(0)}%</span>
+                  <span className={`text-2xl font-bold ${rentPct <= 30 ? "text-green-700" : rentPct <= 40 ? "text-amber-700" : "text-red-700"}`}>{rentPct.toFixed(0)}%</span>
                 </div>
                 <div className="w-full bg-white/60 rounded-full h-2 mb-3">
                   <div
-                    className={`h-2 rounded-full transition-all ${
-                      rentPct <= 30 ? "bg-green-500" :
-                      rentPct <= 40 ? "bg-amber-500" :
-                      "bg-red-500"
-                    }`}
+                    className={`h-2 rounded-full transition-all ${rentPct <= 30 ? "bg-green-500" : rentPct <= 40 ? "bg-amber-500" : "bg-red-500"}`}
                     style={{ width: `${Math.min(rentPct, 100)}%` }}
                   />
                 </div>
-                <p className={`text-xs ${
-                  rentPct <= 30 ? "text-green-700" :
-                  rentPct <= 40 ? "text-amber-700" :
-                  "text-red-700"
-                }`}>
+                <p className={`text-xs ${rentPct <= 30 ? "text-green-700" : rentPct <= 40 ? "text-amber-700" : "text-red-700"}`}>
                   {rentPct <= 30
                     ? `Con tu salario de ${formatEur(salaryNum)}, este piso está dentro de lo recomendado.`
-                    : `Para que sea asequible deberías pagar máximo ${formatEur(affordablePrice)}/mes o ganar ${formatEur(Math.round(result.price_monthly / 0.30))}/mes.`
-                  }
+                    : `Para que sea asequible deberías pagar máximo ${formatEur(affordablePrice)}/mes o ganar ${formatEur(Math.round(result.price_monthly / 0.30))}/mes.`}
                 </p>
               </div>
             )}
           </div>
 
-          {/* Generalitat official market data */}
-          {marketContext && (
-            <div className="card p-6">
-              <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-                <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Precio oficial según la Generalitat de Catalunya
-              </h2>
-              <p className="text-xs text-gray-400 mb-4">
-                Datos del Registre de Fiançaments de Contractes de Lloguer · {marketContext.source === "api" ? "Fuente en tiempo real" : "Datos de referencia"}
-              </p>
+          {/* Listing details — collapsed */}
+          <CollapsibleSection
+            title="Detalles del piso"
+            icon={<svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>}
+          >
+            <dl className="space-y-2 text-sm">
+              {[
+                { label: "Zona", value: result.zone_name },
+                { label: "Superficie", value: `${result.sqm} m²` },
+                { label: "Habitaciones", value: `${result.bedrooms} hab. · ${result.bathrooms} baño${result.bathrooms > 1 ? "s" : ""}` },
+                { label: "Planta", value: result.floor === 0 ? "Bajo" : `${result.floor}ª` },
+                { label: "Estado", value: result.condition.replace("_", " ") },
+              ].map((item) => (
+                <div key={item.label} className="flex justify-between">
+                  <dt className="text-gray-500">{item.label}</dt>
+                  <dd className="font-medium text-gray-900 capitalize">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </CollapsibleSection>
 
-              {/* Key stats */}
+          {/* Factors — collapsed */}
+          <CollapsibleSection
+            title="Factores analizados"
+            icon={<svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          >
+            <div className="space-y-3">
+              {result.explanation.map((f, i) => (
+                <div key={i} className="flex items-start justify-between gap-3 py-2 border-b border-gray-50 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{f.factor}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{f.description}</p>
+                  </div>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${f.impact.startsWith("+") ? "bg-green-100 text-green-700" : f.impact.startsWith("-") ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+                    {f.impact}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+        </div>
+
+        {/* Right column */}
+        <div className="md:col-span-2 space-y-4">
+          {/* Comparables */}
+          <div className="card p-6">
+            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Pisos similares en el mercado
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 text-gray-500 font-medium">Zona</th>
+                    <th className="text-right py-2 text-gray-500 font-medium">Precio</th>
+                    <th className="text-right py-2 text-gray-500 font-medium">m²</th>
+                    <th className="text-right py-2 text-gray-500 font-medium">€/m²</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparables.map((c, i) => (
+                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                      <td className="py-3 text-gray-900">{c.zone}</td>
+                      <td className="py-3 text-right font-medium text-gray-900">{formatEur(c.price)}</td>
+                      <td className="py-3 text-right text-gray-600">{c.sqm}m²</td>
+                      <td className="py-3 text-right">
+                        <span className={`font-semibold ${c.eur_m2 < eurM2Ref ? "text-green-600" : c.eur_m2 > eurM2Ref * 1.1 ? "text-red-600" : "text-yellow-600"}`}>
+                          {c.eur_m2}€
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              * Estimados a partir del precio oficial Generalitat Catalunya
+              {marketContext ? ` (${marketContext.districtAvgPricePerM2.toFixed(1)} €/m² en ${result.zone_name}, ${marketContext.year})` : ""}.
+            </p>
+          </div>
+
+          {/* Negotiation text */}
+          {negotiationText && (
+            <div className="card p-6 border-l-4 border-orange-400">
+              <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Texto sugerido de negociación
+              </h2>
+              <p className="text-gray-600 leading-relaxed text-sm">{negotiationText}</p>
+              <button onClick={handleCopyNegotiation} className="mt-4 btn-secondary text-sm py-2 px-4 print-hide">
+                {copiedNegotiation ? "¡Copiado!" : "Copiar texto"}
+              </button>
+            </div>
+          )}
+
+          {/* Generalitat data — collapsed */}
+          {marketContext && (
+            <CollapsibleSection
+              title="Datos oficiales Generalitat de Catalunya"
+              icon={<svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
+            >
+              <p className="text-xs text-gray-400 mb-4">
+                Registre de Fiançaments de Contractes de Lloguer · {marketContext.source === "api" ? "Fuente en tiempo real" : "Datos de referencia"}
+              </p>
               <div className="grid grid-cols-3 gap-3 mb-5">
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500 mb-1">Media Barcelona</p>
@@ -428,18 +517,16 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
                   <p className="text-xs text-gray-400">precio estimado</p>
                 </div>
               </div>
-
-              {/* Historical trend table */}
               {marketContext.history.length > 0 && (
                 <>
-                  <p className="text-xs font-medium text-gray-600 mb-2 uppercase tracking-wider">Evolución precio €/m² en Barcelona ciudad</p>
+                  <p className="text-xs font-medium text-gray-600 mb-2 uppercase tracking-wider">Evolución €/m² en Barcelona</p>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-100">
                           <th className="text-left py-1.5 text-xs text-gray-500 font-medium">Año</th>
-                          <th className="text-left py-1.5 text-xs text-gray-500 font-medium">Trimestre</th>
-                          <th className="text-right py-1.5 text-xs text-gray-500 font-medium">€/m² medio</th>
+                          <th className="text-left py-1.5 text-xs text-gray-500 font-medium">Trim.</th>
+                          <th className="text-right py-1.5 text-xs text-gray-500 font-medium">€/m²</th>
                           <th className="text-right py-1.5 text-xs text-gray-500 font-medium">Precio medio</th>
                         </tr>
                       </thead>
@@ -456,213 +543,24 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
                     </table>
                   </div>
                   <p className="text-xs text-gray-400 mt-3">
-                    Fuente: <a href="https://analisi.transparenciacatalunya.cat/Habitatge/Preu-mitj-del-lloguer-d-habitatges-per-municipi/qww9-bvhh" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Generalitat de Catalunya — Preu mitjà del lloguer per municipi</a>
+                    Fuente: <a href="https://analisi.transparenciacatalunya.cat/Habitatge/Preu-mitj-del-lloguer-d-habitatges-per-municipi/qww9-bvhh" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Generalitat de Catalunya</a>
                   </p>
                 </>
               )}
-            </div>
+            </CollapsibleSection>
           )}
-
-          {/* INCASÒL — Legal rent cap */}
-          <div className={`card p-6 border-l-4 ${incasol.isAboveLimit ? "border-red-400" : "border-green-400"}`}>
-            <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-              <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              ¿Es legal este alquiler?
-            </h2>
-            <p className="text-xs text-gray-400 mb-4">
-              Barcelona es zona tensionada desde 2022. El precio máximo está limitado por el Índex de Referència de Preus del Lloguer (IRPL) · Estimación por distrito
-            </p>
-
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-500 mb-1">Precio anunciado</p>
-                <p className="text-lg font-bold text-gray-900">{result.price_monthly.toLocaleString("es-ES")}€</p>
-                <p className="text-xs text-gray-400">/mes</p>
-              </div>
-              <div className={`rounded-lg p-3 text-center ${incasol.isAboveLimit ? "bg-red-50 border border-red-100" : "bg-green-50 border border-green-100"}`}>
-                <p className="text-xs text-gray-500 mb-1">Máx. legal estimado</p>
-                <p className={`text-lg font-bold ${incasol.isAboveLimit ? "text-red-700" : "text-green-700"}`}>
-                  {incasol.incasolMaxRent.toLocaleString("es-ES")}€
-                </p>
-                <p className="text-xs text-gray-400">{incasol.incasolEurM2} €/m² IRPL</p>
-              </div>
-              <div className={`rounded-lg p-3 text-center ${incasol.isAboveLimit ? "bg-red-50 border border-red-100" : "bg-green-50 border border-green-100"}`}>
-                <p className="text-xs text-gray-500 mb-1">{incasol.isAboveLimit ? "Exceso mensual" : "Diferencia"}</p>
-                <p className={`text-lg font-bold ${incasol.isAboveLimit ? "text-red-700" : "text-green-700"}`}>
-                  {incasol.isAboveLimit ? `+${incasol.overByMonthly.toLocaleString("es-ES")}€` : "Dentro del límite"}
-                </p>
-                {incasol.isAboveLimit && (
-                  <p className="text-xs text-red-600 font-medium">{incasol.overByAnnual.toLocaleString("es-ES")}€/año</p>
-                )}
-              </div>
-            </div>
-
-            {incasol.isAboveLimit ? (
-              <div className="bg-red-50 rounded-xl p-4 mb-4">
-                <p className="text-sm text-red-800 font-medium mb-1">
-                  Este alquiler podría superar el índice legal en aproximadamente {incasol.overByMonthly.toLocaleString("es-ES")}€/mes ({incasol.overByAnnual.toLocaleString("es-ES")}€/año)
-                </p>
-                <p className="text-xs text-red-700">
-                  Estimación basada en el IRPL del distrito {district}. El índice exacto depende de la sección censal, superficie y año de construcción.
-                </p>
-              </div>
-            ) : (
-              <div className="bg-green-50 rounded-xl p-4 mb-4">
-                <p className="text-sm text-green-800 font-medium mb-1">
-                  Este alquiler parece estar dentro del límite legal estimado para {district}
-                </p>
-                <p className="text-xs text-green-700">
-                  Verifica el índice exacto con la dirección del piso para confirmarlo.
-                </p>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={INCASOL_CHECKER_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary text-sm flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-                Verificar índice oficial
-              </a>
-              {incasol.isAboveLimit && (
-                <a
-                  href={SINDICAT_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary text-sm flex items-center gap-2"
-                >
-                  Pedir asesoría gratuita
-                </a>
-              )}
-            </div>
-            <p className="text-xs text-gray-400 mt-3">
-              Fuente: <a href={INCASOL_CHECKER_URL} target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Agència de l&apos;Habitatge de Catalunya — IRPL 2024</a>
-            </p>
-          </div>
-
-          {/* ¿Qué hago ahora? */}
-          <div className="card p-6">
-            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              ¿Qué hago ahora?
-            </h2>
-            <div className="space-y-3">
-              {result.label === "BAJO" && (
-                <>
-                  <ActionCard
-                    icon="✅"
-                    title="Buen precio — negocia las condiciones"
-                    desc="Con este precio de salida puedes pedir mejoras: pintura, electrodomésticos, meses de carencia, o una cláusula de renuncia al subarrendamiento."
-                  />
-                  <ActionCard
-                    icon="📋"
-                    title="Revisa el contrato antes de firmar"
-                    desc="Asegúrate de que el contrato incluye la cédula de habitabilidad, el certificado energético y la fianza no excede 2 mensualidades."
-                    href="https://habitatge.gencat.cat/ca/detalls/Article/Contractes-de-lloguer"
-                  />
-                </>
-              )}
-              {result.label === "MEDIO" && (
-                <>
-                  <ActionCard
-                    icon="💬"
-                    title="Intenta negociar a la baja"
-                    desc={`El precio está en el rango de mercado, pero siempre hay margen. Ofrece un alquiler de ${(result.estimated_min).toLocaleString("es-ES")}€ con una contra-propuesta razonada.`}
-                  />
-                  <ActionCard
-                    icon="🔍"
-                    title="Verifica el índice IRPL"
-                    desc="Comprueba si el precio supera el índice legal con la dirección exacta del piso."
-                    href={INCASOL_CHECKER_URL}
-                  />
-                </>
-              )}
-              {result.label === "ELEVADO" && (
-                <>
-                  <ActionCard
-                    icon="⚖️"
-                    title={incasol.isAboveLimit ? "Este alquiler podría ser ilegal" : "Precio por encima del mercado"}
-                    desc={
-                      incasol.isAboveLimit
-                        ? `Según el índice IRPL, el máximo legal estimado es ${incasol.incasolMaxRent.toLocaleString("es-ES")}€/mes. Tienes derecho a reclamar la diferencia.`
-                        : `Este piso está un ${Math.abs(result.difference_pct)}% por encima del precio de mercado. Negocia o busca alternativas.`
-                    }
-                    href={INCASOL_CHECKER_URL}
-                  />
-                  <ActionCard
-                    icon="🏛️"
-                    title="Asesoría gratuita del Sindicat de Llogateres"
-                    desc="El Sindicat ofrece asesoría jurídica gratuita para inquilinos. Te ayudan a reclamar alquileres por encima del índice o a defender tus derechos."
-                    href={SINDICAT_URL}
-                  />
-                  <ActionCard
-                    icon="📝"
-                    title="Reclamación formal a l'Agència de l'Habitatge"
-                    desc="Si el propietario incumple el índice IRPL puedes presentar una reclamación formal. El proceso es gratuito."
-                    href="https://habitatge.gencat.cat/ca/detalls/Tramit/Denuncia-per-incompliment-de-la-normativa-d-habitatge-H107Ge"
-                  />
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Negotiation */}
-          {negotiationText && (
-            <div className="card p-6 border-l-4 border-orange-400">
-              <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <span className="text-xl">💬</span>
-                Texto sugerido de negociación
-              </h2>
-              <p className="text-gray-600 leading-relaxed text-sm">
-                {negotiationText}
-              </p>
-              <button
-                onClick={handleCopyNegotiation}
-                className="mt-4 btn-secondary text-sm py-2 px-4 print-hide"
-              >
-                {copiedNegotiation ? "¡Copiado!" : "Copiar texto"}
-              </button>
-            </div>
-          )}
-
-          {/* CTA */}
-          <div className="card p-6 bg-brand-50 border-brand-100 print-hide">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">
-                  Comparte este análisis
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Copia el enlace para compartir estos resultados.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleCopyLink}
-                  className="btn-primary text-sm flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  {copied ? "¡Enlace copiado!" : "Copiar enlace"}
-                </button>
-                <Link href="/radar" className="btn-secondary text-sm">
-                  Ver radar
-                </Link>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
+
+      {/* Auth modal (save analysis) */}
+      {mounted && showAuthModal && createPortal(
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onContinueAsGuest={() => setShowAuthModal(false)}
+          onGoogleRedirect={() => setShowAuthModal(false)}
+        />,
+        document.body
+      )}
     </div>
   );
 }

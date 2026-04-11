@@ -1,14 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import AuthButton from "@/components/auth/AuthButton";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getSession().then((res) => {
+      setIsLoggedIn(!!res.data.session);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+    return () => { listener.subscription.unsubscribe(); };
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
@@ -36,12 +49,14 @@ export default function Header() {
             >
               Radar
             </Link>
-            <Link
-              href="/mis-analisis"
-              className={`btn-ghost text-sm ${pathname === "/mis-analisis" ? "text-brand-600 bg-brand-50" : ""}`}
-            >
-              Historial
-            </Link>
+            {isLoggedIn && (
+              <Link
+                href="/mis-analisis"
+                className={`btn-ghost text-sm ${pathname === "/mis-analisis" ? "text-brand-600 bg-brand-50" : ""}`}
+              >
+                Historial
+              </Link>
+            )}
           </nav>
 
           {/* Auth + mobile toggle */}
@@ -71,30 +86,26 @@ export default function Header() {
             <Link
               href="/"
               onClick={() => setMobileOpen(false)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                pathname === "/" ? "text-brand-600 bg-brand-50" : "text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname === "/" ? "text-brand-600 bg-brand-50" : "text-gray-700 hover:bg-gray-50"}`}
             >
               Analizar
             </Link>
             <Link
               href="/radar"
               onClick={() => setMobileOpen(false)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                pathname === "/radar" ? "text-brand-600 bg-brand-50" : "text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname === "/radar" ? "text-brand-600 bg-brand-50" : "text-gray-700 hover:bg-gray-50"}`}
             >
               Radar
             </Link>
-            <Link
-              href="/mis-analisis"
-              onClick={() => setMobileOpen(false)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                pathname === "/mis-analisis" ? "text-brand-600 bg-brand-50" : "text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              Historial
-            </Link>
+            {isLoggedIn && (
+              <Link
+                href="/mis-analisis"
+                onClick={() => setMobileOpen(false)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname === "/mis-analisis" ? "text-brand-600 bg-brand-50" : "text-gray-700 hover:bg-gray-50"}`}
+              >
+                Historial
+              </Link>
+            )}
           </nav>
         )}
       </div>
