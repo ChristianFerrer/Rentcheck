@@ -71,36 +71,39 @@ export default async function HomePage() {
 
             {/* Demo result card */}
             <div className="mt-10 max-w-lg mx-auto">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Ejemplo de análisis</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Ejemplo de análisis real</p>
               <div className="card overflow-hidden shadow-lg text-left">
                 <div className="bg-gradient-to-r from-red-500 to-rose-600 p-5 text-white">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white/70 text-xs uppercase tracking-wider mb-2">Veredicto · Gràcia, Barcelona</p>
+                      <p className="text-white/70 text-xs uppercase tracking-wider mb-2">Veredicto · Eixample, Barcelona</p>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-sm font-bold">
                         <span className="w-2 h-2 bg-red-300 rounded-full" />
                         Precio elevado
                       </span>
-                      <p className="text-white/80 text-sm mt-2">⚖️ Supera el índice legal en ~280€/mes</p>
+                      <p className="text-white/80 text-sm mt-2">⚖️ Supera el índice legal en ~735€/mes</p>
                     </div>
                     <div className="text-right flex-shrink-0 ml-4">
-                      <p className="text-3xl font-bold">1.400€</p>
-                      <p className="text-white/70 text-xs">/mes · 65m²</p>
+                      <p className="text-3xl font-bold">2.100€</p>
+                      <p className="text-white/70 text-xs">/mes · 70m²</p>
                     </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 divide-x divide-gray-100 text-center">
                   <div className="p-3">
                     <p className="text-xs text-gray-400">Precio estimado</p>
-                    <p className="font-bold text-gray-900 text-sm">1.178€</p>
+                    <p className="font-bold text-gray-900 text-sm">1.855€</p>
+                    <p className="text-xs text-gray-400">mercado</p>
                   </div>
                   <div className="p-3">
                     <p className="text-xs text-gray-400">Máx. legal IRPL</p>
-                    <p className="font-bold text-red-600 text-sm">1.120€</p>
+                    <p className="font-bold text-red-600 text-sm">1.365€</p>
+                    <p className="text-xs text-gray-400">19.5€/m² × 70</p>
                   </div>
                   <div className="p-3">
                     <p className="text-xs text-gray-400">Diferencia</p>
-                    <p className="font-bold text-red-600 text-sm">+18.8%</p>
+                    <p className="font-bold text-red-600 text-sm">+13.2%</p>
+                    <p className="text-xs text-gray-400">vs mercado</p>
                   </div>
                 </div>
               </div>
