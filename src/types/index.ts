@@ -25,6 +25,8 @@ export interface ListingInput {
   furnished: boolean;
   condition: Condition;
   bills_included: boolean;
+  /** Construction era — used to improve IRPL legal cap accuracy */
+  year_of_construction?: string;
 }
 
 export interface ExplanationFactor {
@@ -57,6 +59,7 @@ export interface AnalysisResult {
   difference_pct: number;
   label: PriceLabel;
   explanation: ExplanationFactor[];
+  year_of_construction?: string;
 }
 
 export interface ComparableListing {

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import PriceBadge from "@/components/ui/PriceBadge";
 import { generateNegotiationText } from "@/lib/algorithm/estimator";
-import { checkIncasol, getDistrictForBarrio, INCASOL_CHECKER_URL, SINDICAT_URL } from "@/lib/incasol";
+import { checkIncasol, getDistrictForBarrio, INCASOL_CHECKER_URL, SINDICAT_URL, COMPLAINT_URL, YEAR_BAND_LABELS } from "@/lib/incasol";
+import type { YearBand } from "@/lib/incasol";
 import { createClient } from "@/lib/supabase/client";
 import AuthModal from "@/components/auth/AuthModal";
 import { createPortal } from "react-dom";
@@ -79,7 +80,11 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
 
   const supabase = createClient();
   const district = getDistrictForBarrio(result.zone_name);
-  const incasol = checkIncasol(district, result.sqm, result.price_monthly);
+  const VALID_YEAR_BANDS: YearBand[] = ["pre1960", "1960_1990", "1991_2007", "2008_plus", "unknown"];
+  const yearBand: YearBand = VALID_YEAR_BANDS.includes(result.year_of_construction as YearBand)
+    ? (result.year_of_construction as YearBand)
+    : "unknown";
+  const incasol = checkIncasol(district, result.sqm, result.price_monthly, yearBand);
 
   useEffect(() => {
     setMounted(true);
@@ -198,77 +203,151 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
       )}
 
       {/* INCASÒL — Legal rent cap */}
-      <div className={`card p-6 mb-6 border-l-4 ${incasol.isAboveLimit ? "border-red-400" : "border-green-400"}`}>
-        <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-          <svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-          ¿Es legal este alquiler?
-        </h2>
-        <p className="text-xs text-gray-400 mb-4">
-          Barcelona es zona tensionada desde 2022. El precio máximo está limitado por el Índex de Referència de Preus del Lloguer (IRPL) · Estimación por distrito
-        </p>
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500 mb-1">Precio anunciado</p>
-            <p className="text-lg font-bold text-gray-900">{result.price_monthly.toLocaleString("es-ES")}€</p>
-            <p className="text-xs text-gray-400">/mes</p>
-          </div>
-          <div className={`rounded-lg p-3 text-center ${incasol.isAboveLimit ? "bg-red-50 border border-red-100" : "bg-green-50 border border-green-100"}`}>
-            <p className="text-xs text-gray-500 mb-1">Máx. legal estimado</p>
-            <p className={`text-lg font-bold ${incasol.isAboveLimit ? "text-red-700" : "text-green-700"}`}>
-              {incasol.incasolMaxRent.toLocaleString("es-ES")}€
-            </p>
-            <p className="text-xs text-gray-400">{incasol.incasolEurM2} €/m² IRPL</p>
-          </div>
-          <div className={`rounded-lg p-3 text-center ${incasol.isAboveLimit ? "bg-red-50 border border-red-100" : "bg-green-50 border border-green-100"}`}>
-            <p className="text-xs text-gray-500 mb-1">{incasol.isAboveLimit ? "Exceso mensual" : "Estado"}</p>
-            <p className={`text-lg font-bold ${incasol.isAboveLimit ? "text-red-700" : "text-green-700"}`}>
-              {incasol.isAboveLimit ? `+${incasol.overByMonthly.toLocaleString("es-ES")}€` : "Dentro del límite"}
-            </p>
-            {incasol.isAboveLimit && (
-              <p className="text-xs text-red-600 font-medium">{incasol.overByAnnual.toLocaleString("es-ES")}€/año</p>
-            )}
+      <div className="card overflow-hidden mb-6">
+        {/* Verdict header */}
+        <div className={`p-5 ${incasol.isAboveLimit ? "bg-red-50 border-b border-red-100" : "bg-green-50 border-b border-green-100"}`}>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${incasol.isAboveLimit ? "bg-red-100" : "bg-green-100"}`}>
+                {incasol.isAboveLimit ? (
+                  <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <p className={`text-lg font-bold ${incasol.isAboveLimit ? "text-red-800" : "text-green-800"}`}>
+                  {incasol.isAboveLimit ? "Supera el límite legal" : "Dentro del límite legal"}
+                </p>
+                <p className={`text-xs ${incasol.isAboveLimit ? "text-red-600" : "text-green-600"}`}>
+                  Índex de Referència de Preus del Lloguer (IRPL) · Barcelona zona tensionada
+                </p>
+              </div>
+            </div>
+            {/* Confidence badge */}
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${
+              incasol.confidence === "alta"
+                ? "bg-blue-50 border-blue-200 text-blue-700"
+                : incasol.confidence === "media"
+                ? "bg-amber-50 border-amber-200 text-amber-700"
+                : "bg-gray-50 border-gray-200 text-gray-600"
+            }`}>
+              {incasol.confidence === "alta" ? "Alta precisión" : incasol.confidence === "media" ? "Estimación media" : "Estimación orientativa"}
+            </span>
           </div>
         </div>
-        {incasol.isAboveLimit ? (
-          <div className="bg-red-50 rounded-xl p-4 mb-4">
-            <p className="text-sm text-red-800 font-medium mb-1">
-              Este alquiler podría superar el índice legal en aproximadamente {incasol.overByMonthly.toLocaleString("es-ES")}€/mes ({incasol.overByAnnual.toLocaleString("es-ES")}€/año)
-            </p>
-            <p className="text-xs text-red-700">
-              Estimación basada en el IRPL del distrito {district}. El índice exacto depende de la sección censal, superficie y año de construcción.
-            </p>
+
+        <div className="p-5">
+          {/* Key numbers */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="bg-gray-50 rounded-xl p-3 text-center">
+              <p className="text-xs text-gray-500 mb-1">Precio anunciado</p>
+              <p className="text-xl font-bold text-gray-900">{result.price_monthly.toLocaleString("es-ES")}€</p>
+              <p className="text-xs text-gray-400">/mes</p>
+            </div>
+            <div className={`rounded-xl p-3 text-center ${incasol.isAboveLimit ? "bg-red-50 border border-red-100" : "bg-green-50 border border-green-100"}`}>
+              <p className="text-xs text-gray-500 mb-1">Máx. legal IRPL</p>
+              <p className={`text-xl font-bold ${incasol.isAboveLimit ? "text-red-700" : "text-green-700"}`}>
+                {incasol.incasolMaxRent.toLocaleString("es-ES")}€
+              </p>
+              <p className="text-xs text-gray-400">{incasol.incasolEurM2} €/m²</p>
+            </div>
+            <div className={`rounded-xl p-3 text-center ${incasol.isAboveLimit ? "bg-red-50 border border-red-100" : "bg-green-50 border border-green-100"}`}>
+              <p className="text-xs text-gray-500 mb-1">{incasol.isAboveLimit ? "De más al año" : "Ahorro vs. límite"}</p>
+              <p className={`text-xl font-bold ${incasol.isAboveLimit ? "text-red-700" : "text-green-700"}`}>
+                {incasol.isAboveLimit
+                  ? `${incasol.overByAnnual.toLocaleString("es-ES")}€`
+                  : `${(incasol.incasolMaxRent - result.price_monthly).toLocaleString("es-ES")}€`}
+              </p>
+              {incasol.isAboveLimit && (
+                <p className="text-xs text-red-600 font-medium">{incasol.overByMonthly.toLocaleString("es-ES")}€/mes</p>
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="bg-green-50 rounded-xl p-4 mb-4">
-            <p className="text-sm text-green-800 font-medium mb-1">
-              Este alquiler parece estar dentro del límite legal estimado para {district}
-            </p>
-            <p className="text-xs text-green-700">Verifica el índice exacto con la dirección del piso para confirmarlo.</p>
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <a href={INCASOL_CHECKER_URL} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+
+          {/* Calculation transparency */}
+          <div className="flex items-center gap-2 text-xs text-gray-400 mb-4 flex-wrap">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Verificar índice oficial
-          </a>
+            <span>
+              Calculado con: {result.sqm}m² · {yearBand !== "unknown" ? YEAR_BAND_LABELS[yearBand] : "año desconocido"} · {district}
+              {yearBand !== "unknown" && ` (factor ×${incasol.yearFactor})`}
+            </span>
+          </div>
+
+          {/* Action steps for above limit */}
           {incasol.isAboveLimit && (
-            <>
-              <a href={SINDICAT_URL} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm">
-                Asesoría gratuita (Sindicat)
-              </a>
-              <a
-                href="https://habitatge.gencat.cat/ca/detalls/Tramit/Denuncia-per-incompliment-de-la-normativa-d-habitatge-H107Ge"
-                target="_blank" rel="noopener noreferrer"
-                className="btn-secondary text-sm"
-              >
-                Denunciar anuncio
-              </a>
-            </>
+            <div className="space-y-2 mb-4">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Pasos a seguir</p>
+              {[
+                {
+                  step: "1",
+                  icon: "🔍",
+                  title: "Verifica el índice exacto",
+                  desc: "Comprueba el IRPL oficial con la dirección del piso para tener certeza legal.",
+                  href: INCASOL_CHECKER_URL,
+                  linkText: "Consultar IRPL oficial →",
+                },
+                {
+                  step: "2",
+                  icon: "⚖️",
+                  title: "Pide asesoría gratuita",
+                  desc: "El Sindicat de Llogateres ofrece ayuda jurídica gratuita para reclamar alquileres sobre el índice.",
+                  href: SINDICAT_URL,
+                  linkText: "Sindicat de Llogateres →",
+                },
+                {
+                  step: "3",
+                  icon: "📝",
+                  title: "Presenta una reclamación formal",
+                  desc: "Si el propietario incumple el IRPL puedes denunciarlo gratuitamente a la Agència de l'Habitatge.",
+                  href: COMPLAINT_URL,
+                  linkText: "Formulario de denuncia →",
+                },
+              ].map((item) => (
+                <div key={item.step} className="flex items-start gap-3 p-3 rounded-xl bg-red-50 border border-red-100">
+                  <span className="text-lg flex-shrink-0 mt-0.5">{item.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 mb-0.5">{item.title}</p>
+                    <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+                    {item.href && (
+                      <a href={item.href} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-xs font-semibold text-red-600 hover:text-red-700">
+                        {item.linkText}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
+
+          {/* Within limit note */}
+          {!incasol.isAboveLimit && (
+            <div className="bg-green-50 rounded-xl p-3 mb-4">
+              <p className="text-sm text-green-800">
+                Este alquiler parece estar dentro del límite legal para {district}.{" "}
+                <a href={INCASOL_CHECKER_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                  Verifica con la dirección exacta
+                </a>{" "}
+                para tener certeza legal.
+              </p>
+            </div>
+          )}
+
+          {/* Source trust badge */}
+          <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+            <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <p className="text-xs text-gray-400">
+              Datos IRPL 2024 · Agència de l'Habitatge de Catalunya · Decret Llei 17/2019 + Llei 11/2020 + Ley de Vivienda 2023
+            </p>
+          </div>
         </div>
       </div>
 

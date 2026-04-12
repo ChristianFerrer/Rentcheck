@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       furnished: Boolean(body.furnished),
       condition: body.condition || "bueno",
       bills_included: Boolean(body.bills_included),
+      year_of_construction: body.year_of_construction || undefined,
     };
 
     // Get zone reference price

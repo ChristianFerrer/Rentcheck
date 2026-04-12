@@ -6,6 +6,7 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { createClient } from "@/lib/supabase/client";
 import { BARRIOS_BY_DISTRICT, DISTRICT_ORDER, BARCELONA_BARRIOS } from "@/lib/algorithm/zones";
 import type { Condition } from "@/types";
+import type { YearBand } from "@/lib/incasol";
 import type { ScrapedListing } from "@/lib/scraper/urlParser";
 
 interface Props {
@@ -34,6 +35,7 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
     furnished: false,
     condition: "bueno" as Condition,
     bills_included: false,
+    year_of_construction: "" as YearBand | "",
   });
 
   useEffect(() => {
@@ -73,6 +75,7 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
       furnished: false,
       condition: "bueno",
       bills_included: false,
+      year_of_construction: "",
     });
     setExpanded(true);
   }
@@ -101,6 +104,7 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
           furnished: form.furnished,
           condition: form.condition,
           bills_included: form.bills_included,
+          year_of_construction: form.year_of_construction || undefined,
         }),
       });
 
@@ -294,6 +298,40 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
                     <div className={`flex justify-center mb-1 ${form.condition === opt.value ? "text-brand-600" : "text-gray-400"}`}>
                       {opt.icon}
                     </div>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Year of construction — improves IRPL accuracy */}
+            <div>
+              <label className="label-base">
+                Año de construcción
+                <span className="ml-1.5 text-xs font-normal text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-full">mejora precisión IRPL</span>
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {([
+                  { value: "pre1960", label: "Antes de 1960" },
+                  { value: "1960_1990", label: "1960–1990" },
+                  { value: "1991_2007", label: "1991–2007" },
+                  { value: "2008_plus", label: "2008 o más" },
+                ] as { value: YearBand; label: string }[]).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        year_of_construction: form.year_of_construction === opt.value ? "" : opt.value,
+                      })
+                    }
+                    className={`p-2.5 rounded-xl border-2 text-xs font-medium transition-all text-center ${
+                      form.year_of_construction === opt.value
+                        ? "border-brand-500 bg-brand-50 text-brand-700"
+                        : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
                     {opt.label}
                   </button>
                 ))}
