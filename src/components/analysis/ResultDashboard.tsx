@@ -50,10 +50,10 @@ function CollapsibleSection({ title, icon, children }: { title: string; icon: Re
   );
 }
 
-function ActionCard({ icon, title, desc, href }: { icon: string; title: string; desc: string; href?: string }) {
+function ActionCard({ icon, title, desc, href }: { icon: React.ReactNode; title: string; desc: string; href?: string }) {
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-      <span className="text-xl flex-shrink-0 mt-0.5">{icon}</span>
+      <span className="flex-shrink-0 mt-0.5">{icon}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900 mb-0.5">{title}</p>
         <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
@@ -287,7 +287,7 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
               {[
                 {
                   step: "1",
-                  icon: "🔍",
+                  icon: <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>,
                   title: "Verifica el índice exacto",
                   desc: "Comprueba el IRPL oficial con la dirección del piso para tener certeza legal.",
                   href: INCASOL_CHECKER_URL,
@@ -295,7 +295,7 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
                 },
                 {
                   step: "2",
-                  icon: "⚖️",
+                  icon: <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.589-1.202L18.75 4.97Zm-12.5 0L3.63 15.696c-.122.499.106 1.028.589 1.202a5.989 5.989 0 0 0 2.031.352 5.989 5.989 0 0 0 2.031-.352c.483-.174.711-.703.589-1.202L6.25 4.97Z" /></svg>,
                   title: "Pide asesoría gratuita",
                   desc: "El Sindicat de Llogateres ofrece ayuda jurídica gratuita para reclamar alquileres sobre el índice.",
                   href: SINDICAT_URL,
@@ -303,7 +303,7 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
                 },
                 {
                   step: "3",
-                  icon: "📝",
+                  icon: <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>,
                   title: "Presenta una reclamación formal",
                   desc: "Si el propietario incumple el IRPL puedes denunciarlo gratuitamente a la Agència de l'Habitatge.",
                   href: COMPLAINT_URL,
@@ -311,7 +311,7 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
                 },
               ].map((item) => (
                 <div key={item.step} className="flex items-start gap-3 p-3 rounded-xl bg-red-50 border border-red-100">
-                  <span className="text-lg flex-shrink-0 mt-0.5">{item.icon}</span>
+                  <span className="flex-shrink-0 mt-0.5">{item.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 mb-0.5">{item.title}</p>
                     <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
@@ -362,28 +362,56 @@ export default function ResultDashboard({ result, comparables, marketContext }: 
         <div className="space-y-3">
           {result.label === "BAJO" && (
             <>
-              <ActionCard icon="✅" title="Buen precio — negocia las condiciones" desc="Con este precio de salida puedes pedir mejoras: pintura, electrodomésticos, meses de carencia o una cláusula de renuncia al subarrendamiento." />
-              <ActionCard icon="📋" title="Revisa el contrato antes de firmar" desc="Asegúrate de que incluye la cédula de habitabilidad, el certificado energético y que la fianza no excede 2 mensualidades." href="https://habitatge.gencat.cat/ca/detalls/Article/Contractes-de-lloguer" />
+              <ActionCard
+                icon={<svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" /></svg>}
+                title="Buen precio — negocia las condiciones"
+                desc="Con este precio de salida puedes pedir mejoras: pintura, electrodomésticos, meses de carencia o una cláusula de renuncia al subarrendamiento."
+              />
+              <ActionCard
+                icon={<svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" /></svg>}
+                title="Revisa el contrato antes de firmar"
+                desc="Asegúrate de que incluye la cédula de habitabilidad, el certificado energético y que la fianza no excede 2 mensualidades."
+                href="https://habitatge.gencat.cat/ca/detalls/Article/Contractes-de-lloguer"
+              />
             </>
           )}
           {result.label === "MEDIO" && (
             <>
-              <ActionCard icon="💬" title="Intenta negociar a la baja" desc={`El precio está en rango de mercado, pero siempre hay margen. Propón ${formatEur(result.estimated_min)}/mes como contraoferta razonada.`} />
-              <ActionCard icon="🔍" title="Verifica el índice IRPL" desc="Comprueba con la dirección exacta del piso si el precio supera el límite legal." href={INCASOL_CHECKER_URL} />
+              <ActionCard
+                icon={<svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" /></svg>}
+                title="Intenta negociar a la baja"
+                desc={`El precio está en rango de mercado, pero siempre hay margen. Propón ${formatEur(result.estimated_min)}/mes como contraoferta razonada.`}
+              />
+              <ActionCard
+                icon={<svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>}
+                title="Verifica el índice IRPL"
+                desc="Comprueba con la dirección exacta del piso si el precio supera el límite legal."
+                href={INCASOL_CHECKER_URL}
+              />
             </>
           )}
           {result.label === "ELEVADO" && (
             <>
               <ActionCard
-                icon="⚖️"
+                icon={<svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.589-1.202L18.75 4.97Zm-12.5 0L3.63 15.696c-.122.499.106 1.028.589 1.202a5.989 5.989 0 0 0 2.031.352 5.989 5.989 0 0 0 2.031-.352c.483-.174.711-.703.589-1.202L6.25 4.97Z" /></svg>}
                 title={incasol.isAboveLimit ? "Este alquiler podría ser ilegal" : "Precio por encima del mercado"}
                 desc={incasol.isAboveLimit
                   ? `El máximo legal estimado es ${formatEur(incasol.incasolMaxRent)}/mes. Tienes derecho a reclamar la diferencia.`
                   : `Este piso está un ${Math.abs(result.difference_pct)}% sobre el precio de mercado. Negocia usando el análisis como argumento.`}
                 href={INCASOL_CHECKER_URL}
               />
-              <ActionCard icon="🏛️" title="Asesoría gratuita del Sindicat de Llogateres" desc="El Sindicat ofrece asesoría jurídica gratuita. Te ayudan a reclamar alquileres sobre el índice y a defender tus derechos." href={SINDICAT_URL} />
-              <ActionCard icon="📝" title="Reclamación formal a l'Agència de l'Habitatge" desc="Si el propietario incumple el IRPL puedes presentar una reclamación formal gratuita." href="https://habitatge.gencat.cat/ca/detalls/Tramit/Denuncia-per-incompliment-de-la-normativa-d-habitatge-H107Ge" />
+              <ActionCard
+                icon={<svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" /></svg>}
+                title="Asesoría gratuita del Sindicat de Llogateres"
+                desc="El Sindicat ofrece asesoría jurídica gratuita. Te ayudan a reclamar alquileres sobre el índice y a defender tus derechos."
+                href={SINDICAT_URL}
+              />
+              <ActionCard
+                icon={<svg className="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>}
+                title="Reclamación formal a l'Agència de l'Habitatge"
+                desc="Si el propietario incumple el IRPL puedes presentar una reclamación formal gratuita."
+                href="https://habitatge.gencat.cat/ca/detalls/Tramit/Denuncia-per-incompliment-de-la-normativa-d-habitatge-H107Ge"
+              />
             </>
           )}
         </div>

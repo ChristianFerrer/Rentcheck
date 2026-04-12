@@ -31,7 +31,9 @@ export default function BookmarkletPage() {
       {/* Mobile warning banner */}
       <div className="md:hidden mb-8 rounded-xl border border-orange-200 bg-orange-50 p-5">
         <div className="flex items-start gap-3">
-          <span className="text-2xl">📱</span>
+          <svg className="w-6 h-6 text-orange-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 9h3" />
+            </svg>
           <div>
             <p className="font-semibold text-orange-900 mb-1">
               Los bookmarklets no funcionan en móvil
