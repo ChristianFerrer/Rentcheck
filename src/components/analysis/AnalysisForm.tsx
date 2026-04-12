@@ -20,8 +20,32 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [expandedDistrict, setExpandedDistrict] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!(e.target as Element).closest("[data-barrio-picker]")) setPickerOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [pickerOpen]);
+
+  function openPicker() {
+    // Auto-expand the district of the currently selected barrio
+    const current = BARCELONA_BARRIOS.find((b) => b.zone_name === form.zone_name);
+    setExpandedDistrict(current?.district ?? DISTRICT_ORDER[0]);
+    setPickerOpen(true);
+  }
+
+  function selectBarrio(zone_name: string) {
+    setForm((prev) => ({ ...prev, zone_name }));
+    setPickerOpen(false);
+  }
 
   const [form, setForm] = useState({
     zone_name: BARCELONA_BARRIOS[0].zone_name,
@@ -156,23 +180,85 @@ export default function AnalysisForm({ sourceUrl, prefillExample, scrapedData }:
       <form onSubmit={handleSubmit} className="space-y-5">
 
         {/* Essential fields: barrio + price + sqm */}
-        <div>
+        <div className="relative" data-barrio-picker>
           <label className="label-base">Barrio</label>
-          <select
-            className="input-base"
-            value={form.zone_name}
-            onChange={(e) => setForm({ ...form, zone_name: e.target.value })}
+          {/* Trigger button */}
+          <button
+            type="button"
+            onClick={openPicker}
+            className="input-base w-full text-left flex items-center justify-between"
           >
-            {DISTRICT_ORDER.filter((d) => BARRIOS_BY_DISTRICT[d]).map((district) => (
-              <optgroup key={district} label={district}>
-                {BARRIOS_BY_DISTRICT[district].map((b) => (
-                  <option key={b.id} value={b.zone_name}>
-                    {b.zone_name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+            <span className={form.zone_name ? "text-gray-900" : "text-gray-400"}>
+              {form.zone_name || "Selecciona un barrio"}
+            </span>
+            <svg
+              className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${pickerOpen ? "rotate-180" : ""}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Dropdown panel */}
+          {pickerOpen && (
+            <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+              {DISTRICT_ORDER.filter((d) => BARRIOS_BY_DISTRICT[d]).map((district) => {
+                const isOpen = expandedDistrict === district;
+                const barrios = BARRIOS_BY_DISTRICT[district];
+                const hasSelected = barrios.some((b) => b.zone_name === form.zone_name);
+                return (
+                  <div key={district}>
+                    {/* District row */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedDistrict(isOpen ? null : district)}
+                      className={`w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-gray-50 ${hasSelected ? "bg-brand-50" : ""}`}
+                    >
+                      <span className={`text-sm font-semibold ${hasSelected ? "text-brand-700" : "text-gray-700"}`}>
+                        {district}
+                      </span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {hasSelected && (
+                          <span className="text-xs text-brand-500 truncate max-w-[120px]">{form.zone_name}</span>
+                        )}
+                        <svg
+                          className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </button>
+
+                    {/* Barrio rows */}
+                    {isOpen && (
+                      <div className="bg-gray-50 border-t border-b border-gray-100">
+                        {barrios.map((b) => (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => selectBarrio(b.zone_name)}
+                            className={`w-full text-left px-6 py-2 text-sm transition-colors hover:bg-brand-50 hover:text-brand-700 flex items-center justify-between ${
+                              form.zone_name === b.zone_name
+                                ? "text-brand-700 font-medium bg-brand-50"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            <span>{b.zone_name}</span>
+                            {form.zone_name === b.zone_name && (
+                              <svg className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
