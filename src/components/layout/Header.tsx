@@ -49,6 +49,12 @@ export default function Header() {
             >
               Radar
             </Link>
+            <Link
+              href="/monitor"
+              className={`btn-ghost text-sm ${pathname.startsWith("/monitor") ? "text-brand-600 bg-brand-50" : ""}`}
+            >
+              Monitor
+            </Link>
             {isLoggedIn && (
               <Link
                 href="/mis-analisis"
@@ -96,6 +102,13 @@ export default function Header() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname === "/radar" ? "text-brand-600 bg-brand-50" : "text-gray-700 hover:bg-gray-50"}`}
             >
               Radar
+            </Link>
+            <Link
+              href="/monitor"
+              onClick={() => setMobileOpen(false)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${pathname.startsWith("/monitor") ? "text-brand-600 bg-brand-50" : "text-gray-700 hover:bg-gray-50"}`}
+            >
+              Monitor
             </Link>
             {isLoggedIn && (
               <Link
